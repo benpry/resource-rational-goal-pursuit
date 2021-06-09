@@ -1,0 +1,19 @@
+executable = python3
+
+arguments = ../run_model/run_model_on_situations.py
+
+error = score.err
+
+output = score.out
+
+getenv = True
+
+log = score.log
+
+request_memory = 1000
+
+request_cpus = 1
+
+concurrency_limits = user.mytag:10
+
+queue

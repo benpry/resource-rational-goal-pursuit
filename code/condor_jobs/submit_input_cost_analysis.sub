@@ -1,0 +1,17 @@
+executable = script_run_model_with_exo_cost.sh
+
+arguments = $(Process)
+
+getenv = True
+
+error = input_analysis/err.$(process)
+
+output = input_analysis/out.$(process)
+
+log = input_analysis/log.$(process)
+
+request_memory = 1024
+
+request_cpus = 1
+
+queue 100

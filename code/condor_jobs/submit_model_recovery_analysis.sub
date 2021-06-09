@@ -1,0 +1,17 @@
+executable = script_model_recovery.sh
+
+arguments = $(Process)
+
+getenv = True
+
+error = model_recovery/err.$(process)
+
+output = model_recovery/out.$(process)
+
+log = model_recovery/log.$(process)
+
+request_memory = 1024
+
+request_cpus = 1
+
+queue 101
