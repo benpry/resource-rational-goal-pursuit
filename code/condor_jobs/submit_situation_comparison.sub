@@ -1,0 +1,17 @@
+executable = script_comparison.sh
+
+arguments = $(Process)
+
+error = comparison/modelcomp.err.$(Process)
+
+output = comparison/modelcomp.out.$(Process)
+
+getenv = True
+
+log = comparison/modelcomp.log.$(Process)
+
+request_memory = 1000
+
+request_cpus = 1
+
+queue 3000
