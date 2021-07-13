@@ -13,6 +13,7 @@ The "code" folder consists of five subfolders:
 - "fitting" contains code that fits a model to the human data and aggregates the results from individual participants and models. 
 - "analysis" contains Jupyter notebooks for analyzing the experimental data and simulated model data.
 - "condor_jobs" contains .sub files that can be used to run the above code on an htcondor computing cluster to simulate data and fit models.
+- "situation_selection" contains code for generating and selecting situations for the experiment.
 
 ## Data
 
