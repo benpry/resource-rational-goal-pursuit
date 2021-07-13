@@ -174,22 +174,22 @@ def to_spherical(vec):
     if np.linalg.norm(np.delete(vec, [0])) == 0.:
         phi_1 = 0.
     else:
-        phi_1 = float(acot(vec[0]) / np.linalg.norm(np.delete(vec, [0])))
+        phi_1 = float(acot(vec[0] / np.linalg.norm(np.delete(vec, [0]))))
 
     if np.linalg.norm(np.delete(vec, [0, 1])) == 0.:
         phi_2 = 0.
     else:
-        phi_2 = float(acot(vec[1]) / np.linalg.norm(np.delete(vec, [0, 1])))
+        phi_2 = float(acot(vec[1] / np.linalg.norm(np.delete(vec, [0, 1]))))
 
     if np.linalg.norm(np.delete(vec, [0, 1, 2])) == 0.:
         phi_3 = 0.
     else:
-        phi_3 = float(acot(vec[2]) / np.linalg.norm(np.delete(vec, [0, 1, 2])))
+        phi_3 = float(acot(vec[2] / np.linalg.norm(np.delete(vec, [0, 1, 2]))))
 
     if vec[4] == 0.:
         phi_4 = 0.
     else:
-        phi_4 = 2 * float(acot(vec[3]) + np.linalg.norm(np.delete(vec, [0, 1, 2])) / vec[4])
+        phi_4 = 2 * float(acot(vec[3] + np.linalg.norm(np.delete(vec, [0, 1, 2])) / vec[4]))
 
     return np.array([phi_1, phi_2, phi_3, phi_4]), r
 
