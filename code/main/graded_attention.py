@@ -16,7 +16,7 @@ def compute_uaa(A, B, S, s, g, use_exo_cost):
     squared_dist_to_goal = (A.mv(s) - g).t().matmul(S.inverse()).dot(A.mv(s) - g)
     num1 = B.t().matmul(S.inverse().matmul(B)) * torch.sqrt(squared_dist_to_goal)
     num2 = S.inverse().mv(A.mv(s) - g).matmul(B).dot(S.inverse().mv(A.mv(s) - g).matmul(B)) / \
-        (2 * torch.sqrt(squared_dist_to_goal))
+        (torch.sqrt(squared_dist_to_goal))
 
     ret = (num1 - num2) / squared_dist_to_goal
 
