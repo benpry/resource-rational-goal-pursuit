@@ -1,2 +1,2 @@
-attention_cost,exp_param,step_size,vm_param,pp_id,ll,AIC,agent_type
-21.7129599039571,0.001,0.0,3.814160913161937,5f35e70693a88f0023c90462,-191.3697231585484,390.7394463170968,sparse_max_discrete
+,attention_cost,exp_param,step_size,vm_param,pp_id,ll,AIC,agent_type
+0,21.7129599039571,0.001,0.0,3.8141609131619365,5f35e70693a88f0023c90462,-191.3697231585484,390.7394463170968,sparse_max_discrete
