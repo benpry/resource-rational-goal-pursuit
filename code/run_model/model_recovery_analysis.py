@@ -25,7 +25,7 @@ exo_cost = 0.01
 use_exo_cost = True
 goal = torch.tensor([[0., 0., 0., 0., 0.], [1, 1, 1, 1, 1]])
 clamp = 25
-OPT_ITERS = 200
+OPT_ITERS = 2
 exp_param_default = 5.
 vm_param_default = 40
 
@@ -165,7 +165,7 @@ def compute_sparsemax_log_likelihood(states, continuous_attention, goal, init_en
     optimizer = BayesianOptimization(
         f=cost_function,
         pbounds=pbounds,
-        random_state=1,
+        random_state=2021,
     )
 
     if clusters is not None:
@@ -212,7 +212,7 @@ def compute_nm1_log_likelihood(states, init_endogenous):
     optimizer = BayesianOptimization(
         f=cost_function,
         pbounds=pbounds,
-        random_state=1,
+        random_state=2021,
     )
 
     optimizer.maximize(
@@ -254,7 +254,7 @@ def compute_nm2_log_likelihood(states, init_endogenous, clusters=None):
     optimizer = BayesianOptimization(
         f=cost_function,
         pbounds=pbounds,
-        random_state=1,
+        random_state=2021,
     )
 
     if clusters is not None:
@@ -304,7 +304,7 @@ def compute_lqr_log_likelihood(states, init_endogenous, exp_param=None, vm_param
     optimizer = BayesianOptimization(
         f=cost_function,
         pbounds=pbounds,
-        random_state=1,
+        random_state=2021,
     )
 
     if exp_param and vm_param:
@@ -348,7 +348,7 @@ def compute_sparse_lqr_log_likelihood(states, init_endogenous, exp_param=None, v
     optimizer = BayesianOptimization(
         f=cost_function,
         pbounds=pbounds,
-        random_state=1,
+        random_state=2021,
     )
 
     if exp_param and vm_param:
@@ -385,7 +385,7 @@ def compute_hill_climbing_log_likelihood(states, goal, init_endogenous, clusters
                                                nr_subgoals=0, init_exogenous=torch.tensor([0., 0., 0., 0.]), T=T,
                                                final_goal=goal, clamp=clamp, agent_class=agent_class, cost=0,
                                                lr=ss, von_mises_parameter=vm, exponential_parameter=exp,
-                                               continuous_attention=continuous_attention,
+                                               continuous_attention=True,
                                                use_exo_cost=use_exo_cost, exo_cost=exo_cost, step_with_model=False,
                                                verbose=False)
 
@@ -401,7 +401,7 @@ def compute_hill_climbing_log_likelihood(states, goal, init_endogenous, clusters
     optimizer = BayesianOptimization(
         f=cost_function,
         pbounds=pbounds,
-        random_state=1,
+        random_state=2021,
     )
 
     if clusters is not None:
