@@ -25,7 +25,7 @@ exo_cost = 0.01
 use_exo_cost = True
 goal = torch.tensor([[0., 0., 0., 0., 0.], [1, 1, 1, 1, 1]])
 clamp = 25
-OPT_ITERS = 2
+OPT_ITERS = 200
 exp_param_default = 5.
 vm_param_default = 40
 
