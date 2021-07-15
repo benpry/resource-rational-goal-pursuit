@@ -422,10 +422,10 @@ def compute_hill_climbing_log_likelihood(states, goal, init_endogenous, clusters
 
 
 # define input and output filepaths
-FIT_PARAMS_FILE = "../../data/e3_fitting_results/best_fitting_models.csv"
-PPID_FILE = "../../data/experimental_data/e3_final_ppids.csv"
-ACTIONS_FILE = "../../data/experimental_data/e3_final.csv"
-CONDITIONS_FILE = "../../data/experimental_data/e3_final_conditions.csv"
+FIT_PARAMS_FILE = "../../data/fitting_results/best_fitting_models.csv"
+PPID_FILE = "../../data/experimental_data/experiment_ppids.csv"
+ACTIONS_FILE = "../../data/experimental_data/experiment_actions.csv"
+CONDITIONS_FILE = "../../data/experimental_data/experiment_conditions.csv"
 OUTPUT_FILE = "../../data/model_recovery/recovery_results_{}.csv"
 
 if __name__ == '__main__':

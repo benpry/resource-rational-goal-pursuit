@@ -37,7 +37,7 @@ output_folder = "../../data/input_cost_analysis"
 qualitative_output_folder = "../../data/qualitative_data"
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--exo_cost_mult", type=float, default=-1)
+parser.add_argument("--exo_cost_mult", type=int, default=-1)
 parser.add_argument('--no_noise', action="store_true", default=False)
 parser.add_argument('--save_qual', action="store_true", default=False)
 
