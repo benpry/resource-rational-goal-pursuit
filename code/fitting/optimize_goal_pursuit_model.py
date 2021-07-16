@@ -4,6 +4,9 @@ This file optimizes the parameters of the goal pursuit model for each human part
 Note: this is only designed to fit the models to the data from experiments without subgoals.
 """
 import sys
+
+import torch
+
 sys.path.append("../main")
 import numpy as np
 from collections import defaultdict
@@ -18,8 +21,9 @@ vm_range = (0., 10.)
 step_size_range = (0., 1.5)
 use_exo_cost = True
 exo_cost = 0.01
-opt_iter = 5
-
+opt_iter = 500
+np.random.seed(416)
+torch.manual_seed(647)
 
 def do_bayesian_optimization(agent_type, data, pp_id, goals):
     """
@@ -203,4 +207,4 @@ for pp_id in [pp_id]:
 # save the results to CSV
 fitted_agent_pp_data = pd.DataFrame(fitted_agent_pp_data)
 print('writing to {}/fitted_model_{}_pp_nr_{}.csv'.format(output_folder, at, select_pp))
-fitted_agent_pp_data.to_csv('{}/fitted_model_{}_pp_nr_{}.csv'.format(output_folder, at, select_pp))
+#fitted_agent_pp_data.to_csv('{}/fitted_model_{}_pp_nr_{}.csv'.format(output_folder, at, select_pp))
