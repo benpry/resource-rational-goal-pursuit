@@ -3,6 +3,7 @@ This file generates random starting states and compares how the LQR and sparsema
 """
 import sys
 import torch
+import numpy as np
 import pandas as pd
 from ast import literal_eval
 from bayes_opt import BayesianOptimization
@@ -28,7 +29,8 @@ clamp = 25
 OPT_ITERS = 200
 exp_param_default = 5.
 vm_param_default = 40
-
+np.random.seed(21)
+torch.seed(22)
 
 def generate_sparsemax_data(continuous_attention, goal, init_endogenous, use_exo_cost, attention_cost, step_size,
                             exp_param=exp_param_default, vm_param=vm_param_default, add_noise=False):

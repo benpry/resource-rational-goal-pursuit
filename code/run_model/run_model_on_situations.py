@@ -27,6 +27,9 @@ init_exogenous = [0., 0., 0., 0.]
 use_exo_cost = True
 T = 10
 
+np.random.seed(500)
+torch.seed(1000)
+
 # initialize filepaths and hyperparameters
 params_filepath = '../../data/fitting_results/best_fitting_models.csv'
 situations_filepath = '../../data/experimental_data/experiment_conditions.csv'
