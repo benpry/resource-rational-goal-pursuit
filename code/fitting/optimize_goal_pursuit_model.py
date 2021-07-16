@@ -207,4 +207,4 @@ for pp_id in [pp_id]:
 # save the results to CSV
 fitted_agent_pp_data = pd.DataFrame(fitted_agent_pp_data)
 print('writing to {}/fitted_model_{}_pp_nr_{}.csv'.format(output_folder, at, select_pp))
-#fitted_agent_pp_data.to_csv('{}/fitted_model_{}_pp_nr_{}.csv'.format(output_folder, at, select_pp))
+fitted_agent_pp_data.to_csv('{}/fitted_model_{}_pp_nr_{}.csv'.format(output_folder, at, select_pp))
