@@ -149,9 +149,9 @@ def analytic_attention(microworld, goal_scale, goal_state, t, attention_cost, st
     if use_exo_cost:
 
         # compute the gradient
-        gradient = -(torch.matmul(torch.div(
-            torch.matmul(goal_scale, (s - goal_state)), current_goal_dist),
-            t * B_reduced))
+        gradient = -torch.matmul(torch.div(
+            torch.matmul(goal_scale, (A_reduced.mv(s) - goal_state)), current_goal_dist),
+            B_reduced)
 
         # Implementations of different possible decision functions. We ultimately decided to only use the gradient
         # with optimal step size, which is implemented in the "else" part of this if statement.
