@@ -203,7 +203,10 @@ if __name__ == "__main__":
                 raise RuntimeError("unrecognized agent type")
 
     # save the dataframe of all runs
-    df_all_runs.to_csv(f"{output_folder}/all_model_runs_on_situations_exo={exo_cost}.csv")
+    if save_qual:
+        df_all_runs.to_csv(f"{qualitative_output_folder}/all_model_runs_on_situations_canonical.csv")
+    else:
+        df_all_runs.to_csv(f"{output_folder}/all_model_runs_on_situations_exo={exo_cost}.csv")
 
     # save the qualitative data if the option to do so was on
     if save_qual:
