@@ -263,7 +263,7 @@ class HillClimbingAgent:
                 opt_step_size = 0
             else:
                 opt_step_size = - self.goal_scale.inverse()\
-                    .matmul(microworld_attention.A.mv(microworld_attention.endogenous_state) - self.goal_loc)\
+                    .matmul(microworld_attention.endogenous_state - self.goal_loc)\
                     .dot(microworld_attention.B.mv(gradient)) / (microworld_attention.B.mv(gradient)
                                                                  .matmul(self.goal_scale.inverse())
                                                                  .dot(microworld_attention.B.mv(gradient))
