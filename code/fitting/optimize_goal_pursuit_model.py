@@ -4,7 +4,7 @@ This file optimizes the parameters of the goal pursuit model for each human part
 Note: this is only designed to fit the models to the data from experiments without subgoals.
 """
 import sys
-
+import random
 import torch
 
 sys.path.append("../main")
@@ -21,7 +21,6 @@ vm_range = (0., 10.)
 step_size_range = (0., 1.5)
 use_exo_cost = True
 exo_cost = 0.01
-opt_iter = 500
 np.random.seed(416)
 torch.manual_seed(647)
 

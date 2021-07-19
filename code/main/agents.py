@@ -42,7 +42,7 @@ class HillClimbingAgent:
         if type(init_exogenous) == torch.Tensor:
             self.exogenous = init_exogenous
         else:
-            self.exogenous = torch.tensor(init_exogenous)
+            self.exogenous = torch.tensor(init_exogenous, dtype=torch.float64)
         self.lr = lr  # the step size of the model
         self.exogenous_cost = 0.
         self.clamp = clamp

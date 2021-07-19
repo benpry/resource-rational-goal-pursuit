@@ -37,13 +37,13 @@ def compute_uax(A, B, S, s, g, is_in_B, loc, use_exo_cost):
     # We have different definitions of this term for elements in A and B
     if is_in_B:
         # configure dB to be all zeros except for a 1 in the position of loc
-        dB = torch.zeros(B.shape)
+        dB = torch.zeros(B.shape, dtype=torch.float64)
         dB[loc] = 1
         num = S.inverse().mv(A.mv(s) - g).matmul(dB)
         denom = torch.sqrt((A.mv(s) - g).t().matmul(S.inverse()).dot(A.mv(s) - g))
         return num / denom
     else:
-        dAs = torch.zeros(A.shape[0])
+        dAs = torch.zeros(A.shape[0], dtype=torch.float64)
         dAs[loc[1]] = s[loc[0]]
         A0 = A.clone()
         A0[loc] = 0

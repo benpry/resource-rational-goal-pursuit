@@ -22,7 +22,7 @@ class Microworld:
         """
         # initialize the endogenouse state and agent
         if type(init) != torch.Tensor:
-            self.endogenous_state = torch.tensor(init)
+            self.endogenous_state = torch.tensor(init, dtype=torch.float64)
         else:
             self.endogenous_state = init
         self.agent = agent

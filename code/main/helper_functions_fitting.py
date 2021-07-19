@@ -86,19 +86,19 @@ def run_lqr_once(A, B, situation, human_data, exo_cost, log_likelihoods, exp_par
                  attention_cost=None):
 
     if type(situation) != torch.Tensor:
-        situation = torch.tensor(situation)
+        situation = torch.tensor(situation, dtype=torch.float64)
 
     init_endogenous = situation
-    Q = torch.zeros(A.shape[0])
-    Qf = torch.diag(torch.ones(A.shape[0]))
-    R = exo_cost * torch.diag(torch.ones(B.shape[1]))
+    Q = torch.zeros(A.shape[0], dtype=torch.float64)
+    Qf = torch.diag(torch.ones(A.shape[0], dtype=torch.float64))
+    R = exo_cost * torch.diag(torch.ones(B.shape[1], dtype=torch.float64))
 
     agent_states = []
     human_states = []
 
     for t in range(n_rounds):
         if t > 0:
-            init_endogenous = torch.tensor(ast.literal_eval(human_data.iloc[t - 1]['endogenous']))
+            init_endogenous = torch.tensor(ast.literal_eval(human_data.iloc[t - 1]['endogenous']), dtype=torch.float64)
 
         # in case not all timesteps are recorded for a pp
         try:
@@ -239,12 +239,13 @@ def make_individual_cost_function(human_data=None, pp_id=None, goals=None, agent
         log_likelihoods = []
         goal = goals[goal_id]
 
-        final_goal = torch.tensor(goal[0])
+        final_goal = torch.tensor(goal[0], dtype=torch.float64)
 
         final_goal[1] = 1 / final_goal[1]
         A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
-                          [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]])
-        B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]])
+                          [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]], dtype=torch.float64)
+        B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
+                         dtype=torch.float64)
 
         if agent_type in ('lqr', 'sparse_lqr'):
             run_lqr_once(A, B, goal[1], human_data, exo_cost, log_likelihoods, exp_param, vm_param, n_rounds=10,
@@ -395,8 +396,9 @@ def make_individual_cost_function_null_1(human_data=None, pp_id=None, goals=None
         init_endogenous = goals[1]
         final_goal[1] = 1 / final_goal[1]
         A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
-                          [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]])
-        B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]])
+                          [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]], dtype=torch.float64)
+        B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
+                         dtype=torch.float64)
 
         for i in range(10):
 
@@ -415,7 +417,7 @@ def make_individual_cost_function_null_1(human_data=None, pp_id=None, goals=None
 
                 env = Microworld(A=A, B=B, init=init_endogenous, agent="hillclimbing")
 
-                agent_input = torch.tensor(null_model(n, b, init_endogenous, final_goal[0]))
+                agent_input = torch.tensor(null_model(n, b, init_endogenous, final_goal[0]), dtype=torch.float64)
 
                 env.step(agent_input.unsqueeze(0))
 
@@ -448,8 +450,9 @@ def make_individual_cost_function_null_2(human_data=None, pp_id=None, goals=None
 
         final_goal[1] = 1 / final_goal[1]
         A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
-                          [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]])
-        B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]])
+                          [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]], dtype=torch.float64)
+        B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
+                         dtype=torch.float64)
 
         agent_states = []
         human_states = []
@@ -464,7 +467,7 @@ def make_individual_cost_function_null_2(human_data=None, pp_id=None, goals=None
 
             env = Microworld(A=A, B=B, init=init_endogenous, agent="hillclimbing")
 
-            agent_input = torch.zeros(B.shape[1])
+            agent_input = torch.zeros(B.shape[1], dtype=torch.float64)
 
             env.step(agent_input.unsqueeze(0))
 
