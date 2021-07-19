@@ -79,7 +79,7 @@ def human_and_agent_states_to_log_likelihood(human_states, agent_states, ld, k):
     ll_angles = log_likelihood_von_mises(all_angles, k)
     ll_distance = log_likelihood_exponential(distances_length, ld)
     ll = ll_distance + ll_angles
-    return ll
+    return np.round(ll, 6)
 
 
 def run_lqr_once(A, B, situation, human_data, exo_cost, log_likelihoods, exp_param, vm_param, n_rounds=10,
