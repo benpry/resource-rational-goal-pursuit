@@ -21,6 +21,7 @@ vm_range = (0., 10.)
 step_size_range = (0., 1.5)
 use_exo_cost = True
 exo_cost = 0.01
+opt_iter = 500
 np.random.seed(416)
 torch.manual_seed(647)
 
