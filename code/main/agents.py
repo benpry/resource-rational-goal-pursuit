@@ -248,7 +248,7 @@ class HillClimbingAgent:
         # focus on only the parts of the microworld the agent is paying attention to
         microworld_attention = self.create_attention_mv(endogenous, test_attention_vector)
         # take a step in the reduced microworld
-        microworld_attention.step(self.exogenous)
+        microworld_attention.step(torch.zeros(4, dtype=torch.float64))
 
         # get distance from current goal
         out = self.distance(microworld_attention.endogenous_state, self.goal_loc, self.goal_scale)
