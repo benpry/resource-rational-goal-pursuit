@@ -17,12 +17,13 @@ from Microworld_experiment import Microworld
 from helper_functions_fitting import null_model
 
 # set up the general parameters of the environment
-Q = torch.zeros((5, 5))
-Qf = torch.diag(torch.tensor([1., 1., 1., 1., 1.]))
-goal = torch.tensor([[0., 0., 0., 0., 0.], [1, 1, 1, 1, 1]])
+Q = torch.zeros((5, 5), dtype=torch.float64)
+Qf = torch.diag(torch.tensor([1., 1., 1., 1., 1.], dtype=torch.float64))
+goal = torch.tensor([[0., 0., 0., 0., 0.], [1, 1, 1, 1, 1]], dtype=torch.float64)
 A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
-                  [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]])
-B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]])
+                  [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]], dtype=torch.float64)
+B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
+                 dtype=torch.float64)
 init_exogenous = [0., 0., 0., 0.]
 use_exo_cost = True
 T = 10
@@ -55,7 +56,7 @@ if __name__ == "__main__":
         all_exo_costs = 10 ** (np.linspace(-4, 0, 100))
         exo_cost = all_exo_costs[args.exo_cost_mult]
 
-    R = exo_cost * torch.diag(torch.ones((4,)))
+    R = exo_cost * torch.diag(torch.ones((4,), dtype=torch.float64))
     noise = not args.no_noise
     save_qual = args.save_qual
 
@@ -73,7 +74,7 @@ if __name__ == "__main__":
 
     # run on each situation
     for situation in tqdm(situations[:30]):
-        situation = torch.tensor(literal_eval(situation))
+        situation = torch.tensor(literal_eval(situation), dtype=torch.float64)
 
         # run once per participant, using the best-fitting model and paramters for that participant
         for index, participant in df_params.iterrows():
@@ -88,7 +89,8 @@ if __name__ == "__main__":
                     # initialize and run the agent
                     macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=situation,
                                                        subgoal_dimensions=[0, 1, 2, 3, 4],
-                                                       nr_subgoals=0, init_exogenous=torch.tensor([0., 0., 0., 0.]),
+                                                       nr_subgoals=0, init_exogenous=torch.tensor([0., 0., 0., 0.],
+                                                                                                  dtype=torch.float64),
                                                        T=T, final_goal=goal, clamp=25, agent_class=agent_type,
                                                        cost=attention_cost, lr=step_size,
                                                        von_mises_parameter=vm_param,
@@ -151,7 +153,7 @@ if __name__ == "__main__":
 
                     # run null model 2 on the microworld
                     for i in range(10):
-                        microworld.step_with_model(torch.zeros(B.shape[1]), noise=noise)
+                        microworld.step_with_model(torch.zeros(B.shape[1], dtype=torch.float64), noise=noise)
 
                     # compute the cost and store the exogenous variables
                     s_final = microworld.endogenous_state
@@ -179,8 +181,9 @@ if __name__ == "__main__":
                     # run null model 1 on the microworld
                     all_exo = []
                     for i in range(10):
-                        action = null_model(n, b, microworld.endogenous_state, torch.zeros(A.shape[0]))
-                        action = torch.tensor(action)
+                        action = null_model(n, b, microworld.endogenous_state, torch.zeros(A.shape[0],
+                                                                                           dtype=torch.float64))
+                        action = torch.tensor(action, dtype=torch.float64)
                         microworld.step_with_model(action, noise=noise)
                         all_exo.append(action)
 

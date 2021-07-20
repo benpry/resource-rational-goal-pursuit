@@ -13,13 +13,14 @@ from linear_quadratic_regulator import OptimalAgent
 from Microworld_experiment import Microworld
 
 # set up the general parameters of the environment
-Q = torch.zeros((5, 5))
-Qf = torch.diag(torch.tensor([1., 1., 1., 1., 1.]))
-R = torch.diag(torch.tensor([0.01, 0.01, 0.01, 0.01]))
-goal = torch.tensor([[0., 0., 0., 0., 0.], [1, 1, 1, 1, 1]])
+Q = torch.zeros((5, 5), dtype=torch.float64)
+Qf = torch.diag(torch.tensor([1., 1., 1., 1., 1.], dtype=torch.float64))
+R = torch.diag(torch.tensor([0.01, 0.01, 0.01, 0.01], dtype=torch.float64))
+goal = torch.tensor([[0., 0., 0., 0., 0.], [1, 1, 1, 1, 1]], dtype=torch.float64)
 A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
-                  [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]])
-B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]])
+                  [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]], dtype=torch.float64)
+B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
+                 dtype=torch.float64)
 init_exogenous = [0., 0., 0., 0.]
 exo_cost = 0.01
 use_exo_cost = True
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     lqr_rows = []
 
     for situation in situations:
-        situation = torch.tensor(literal_eval(situation))
+        situation = torch.tensor(literal_eval(situation), dtype=torch.float64)
         individual_performances = defaultdict(list)
 
         # configure a microworld and agent

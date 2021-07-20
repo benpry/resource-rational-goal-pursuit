@@ -64,7 +64,7 @@ class Microworld:
         length += length_noise
 
         # turn spehrical coordinates back to standard coordingates and update endogenous state
-        self.endogenous_state = torch.tensor(self.to_endogenous(length, angles)).float()
+        self.endogenous_state = torch.tensor(self.to_endogenous(length, angles), dtype=torch.float64)
         # print('after', self.endogenous_state)
 
     def arccot(self, x):
