@@ -3,6 +3,7 @@ This file generates random starting states and compares how the LQR and sparsema
 """
 import sys
 import torch
+import random
 import numpy as np
 import pandas as pd
 from ast import literal_eval
@@ -15,16 +16,17 @@ from helper_functions_fitting import human_and_agent_states_to_log_likelihood, n
 
 # set up the general parameters of the environment
 A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
-                  [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]])
-B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]])
-Q = torch.zeros((5, 5))
-Qf = torch.diag(torch.tensor([1., 1., 1., 1., 1.]))
-R = torch.diag(torch.tensor([0.01, 0.01, 0.01, 0.01]))
+                  [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]], dtype=torch.float64)
+B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
+                 dtype=torch.float64)
+Q = torch.zeros((5, 5), dtype=torch.float64)
+Qf = torch.diag(torch.tensor([1., 1., 1., 1., 1.], dtype=torch.float64))
+R = torch.diag(torch.tensor([0.01, 0.01, 0.01, 0.01], dtype=torch.float64))
 T = 10
 agent_class = 'sparse_max'
 exo_cost = 0.01
 use_exo_cost = True
-goal = torch.tensor([[0., 0., 0., 0., 0.], [1, 1, 1, 1, 1]])
+goal = torch.tensor([[0., 0., 0., 0., 0.], [1, 1, 1, 1, 1]], dtype=torch.float64)
 clamp = 25
 OPT_ITERS = 200
 exp_param_default = 5.
@@ -41,7 +43,8 @@ def generate_sparsemax_data(continuous_attention, goal, init_endogenous, use_exo
 
     if add_noise:
         macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous, subgoal_dimensions=[0, 1, 2, 3, 4],
-                                           nr_subgoals=0, init_exogenous=torch.tensor([0., 0., 0., 0.]), T=T,
+                                           nr_subgoals=0,
+                                           init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64), T=T,
                                            final_goal=goal, clamp=clamp, agent_class=agent_class, lr=step_size,
                                            cost=attention_cost, von_mises_parameter=vm_param,
                                            exponential_parameter=exp_param, continuous_attention=continuous_attention,
@@ -49,7 +52,8 @@ def generate_sparsemax_data(continuous_attention, goal, init_endogenous, use_exo
                                            verbose=False)
     else:
         macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous, subgoal_dimensions=[0, 1, 2, 3, 4],
-                                           nr_subgoals=0, init_exogenous=torch.tensor([0., 0., 0., 0.]), T=T,
+                                           nr_subgoals=0,
+                                           init_exogenous=torch.tensor([0., 0., 0., 0.],dtype=torch.float64), T=T,
                                            final_goal=goal, clamp=clamp, agent_class=agent_class, lr=step_size,
                                            cost=attention_cost, continuous_attention=continuous_attention,
                                            use_exo_cost=use_exo_cost, exo_cost=exo_cost, step_with_model=False,
@@ -147,7 +151,8 @@ def compute_sparsemax_log_likelihood(states, continuous_attention, goal, init_en
 
             macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=endogenous,
                                                subgoal_dimensions=[0, 1, 2, 3, 4],
-                                               nr_subgoals=0, init_exogenous=torch.tensor([0., 0., 0., 0.]), T=T,
+                                               nr_subgoals=0,
+                                               init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64), T=T,
                                                final_goal=goal, clamp=clamp, agent_class=agent_class,
                                                cost=ac, lr=ss,  von_mises_parameter=vm,
                                                exponential_parameter=exp,
@@ -203,7 +208,8 @@ def compute_nm1_log_likelihood(states, init_endogenous):
                 endogenous = states[t-1]
 
             env = Microworld(A=A, B=B, init=endogenous)
-            agent_input = torch.tensor(null_model(n, b, endogenous, torch.tensor([0, 0, 0, 0, 0])))
+            agent_input = torch.tensor(null_model(n, b, endogenous, torch.tensor([0, 0, 0, 0, 0], dtype=torch.float64)),
+                                       dtype=torch.float64)
             env.step(agent_input.unsqueeze(0))
             agent_states.append(env.endogenous_state.numpy()[0])
 
@@ -242,7 +248,7 @@ def compute_nm2_log_likelihood(states, init_endogenous, clusters=None):
 
             env = Microworld(A=A, B=B, init=endogenous, agent="hillclimbing")
 
-            agent_input = torch.zeros(B.shape[1])
+            agent_input = torch.zeros(B.shape[1], dtype=torch.float64)
 
             env.step(agent_input.unsqueeze(0))
 
@@ -384,7 +390,8 @@ def compute_hill_climbing_log_likelihood(states, goal, init_endogenous, clusters
 
             macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=endogenous,
                                                subgoal_dimensions=[0, 1, 2, 3, 4],
-                                               nr_subgoals=0, init_exogenous=torch.tensor([0., 0., 0., 0.]), T=T,
+                                               nr_subgoals=0,
+                                               init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64), T=T,
                                                final_goal=goal, clamp=clamp, agent_class=agent_class, cost=0,
                                                lr=ss, von_mises_parameter=vm, exponential_parameter=exp,
                                                continuous_attention=True,
@@ -442,9 +449,9 @@ if __name__ == '__main__':
     df_actions = pd.read_csv(ACTIONS_FILE)
     condition_num = df_actions[df_actions["pp_id"] == ppid]["condition"].min()
     df_conditions = pd.read_csv(CONDITIONS_FILE)
-    situation = torch.tensor(literal_eval(df_conditions.loc[condition_num]["initial_endogenous"])).float()
+    situation = torch.tensor(literal_eval(df_conditions.loc[condition_num]["initial_endogenous"]), dtype=torch.float64)
 
-    goal = torch.tensor([[0., 0., 0., 0., 0.], [1., 1., 1., 1., 1.]])
+    goal = torch.tensor([[0., 0., 0., 0., 0.], [1., 1., 1., 1., 1.]], dtype=torch.float64)
 
     agent_type = row["agent_type"]
 
