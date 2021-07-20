@@ -146,6 +146,9 @@ if __name__ == "__main__":
                         pd.DataFrame({"situation": str(situation.tolist()), "model": agent_type,
                                       "performance": total_cost}, index=[0]), ignore_index=True)
 
+                    if not noise:
+                        break
+
             elif agent_type == 'null_model_2':
                 for _ in range(n_noisy):
                     microworld = Microworld(A=A, B=B, init=situation, exponential_parameter=exp_param,
