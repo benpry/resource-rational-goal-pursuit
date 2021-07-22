@@ -6,7 +6,7 @@ import os
 
 # specify the input and output folders
 input_folder_name = '../../data/fitting_results/individual'
-output_folder_name = '../../data/e3_fitting_results'
+output_folder_name = '../../data/fitting_results'
 
 if __name__ == "__main__":
     agent_names = ['lqr', 'sparse_lqr', 'sparse_max_discrete', 'sparse_max_continuous', 'null_model_1',
@@ -18,12 +18,12 @@ if __name__ == "__main__":
 
         # read the file for each participant
         for pp_number in range(111):
-            file_path = f'{input_folder_name}/fitted_model_{agent_type}_pp_nr_{pp_number}_weighting_{0.4}.csv'
+            file_path = f'{input_folder_name}/fitted_model_{agent_type}_pp_nr_{pp_number}.csv'
 
             if os.path.isfile(file_path):
                 df_ind = pd.read_csv(file_path)
                 df = df.append(df_ind)
             else:
-                print(f"missing: {input_folder_name}/fitted_model_{agent_type}_pp_nr_{pp_number}_weighting_{0.4}.csv")
+                print(f"missing: {input_folder_name}/fitted_model_{agent_type}_pp_nr_{pp_number}.csv")
 
         df.to_csv(f"{output_folder_name}/fitting_results_{agent_name}.csv")
