@@ -2,13 +2,13 @@ executable = script_individual_fitting_pp.sh
 
 arguments = $(Process)
 
-error = ce_fitting/test.err.$(Process)
+error = ce_fitting_2/test.err.$(Process)
 
-output = ce_fitting/test.out.$(Process)
+output = ce_fitting_2/test.out.$(Process)
 
 getenv = True
 
-log = ce_fitting/test.log.$(Process)
+log = ce_fitting_2/test.log.$(Process)
 
 request_memory = 2500
 

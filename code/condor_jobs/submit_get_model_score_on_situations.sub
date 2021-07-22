@@ -1,6 +1,4 @@
-executable = python3
-
-arguments = ../run_model/run_model_on_situations.py
+executable = script_get_model_score_on_situations.sh
 
 error = score.err
 
