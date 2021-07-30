@@ -45,13 +45,11 @@ def compute_uax(A, B, S, s, g, is_in_B, loc, use_exo_cost):
     else:
         dAs = torch.zeros(A.shape[0], dtype=torch.float64)
         dAs[loc[1]] = s[loc[0]]
-        A0 = A.clone()
-        A0[loc] = 0
 
-        squared_dist_to_goal = (A0.mv(s) - g).t().matmul(S.inverse()).dot(A0.mv(s) - g)
+        squared_dist_to_goal = (A.mv(s) - g).t().matmul(S.inverse()).dot(A.mv(s) - g)
 
         num1 = S.inverse().matmul(dAs).matmul(B) * torch.sqrt(squared_dist_to_goal)
-        num2 = S.inverse().mv(A0.mv(s) - g).dot(dAs) * (S.inverse().mv(A0.mv(s) - g)).matmul(B) / \
+        num2 = S.inverse().mv(A.mv(s) - g).dot(dAs) * (S.inverse().mv(A.mv(s) - g)).matmul(B) / \
             torch.sqrt(squared_dist_to_goal)
 
         return (num1 - num2) / squared_dist_to_goal
