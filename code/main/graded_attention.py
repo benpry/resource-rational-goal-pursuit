@@ -44,7 +44,7 @@ def compute_uax(A, B, S, s, g, is_in_B, loc, use_exo_cost):
         return num / denom
     else:
         dAs = torch.zeros(A.shape[0], dtype=torch.float64)
-        dAs[loc[1]] = s[loc[0]]
+        dAs[loc[0]] = s[loc[1]]
 
         squared_dist_to_goal = (A.mv(s) - g).t().matmul(S.inverse()).dot(A.mv(s) - g)
 
