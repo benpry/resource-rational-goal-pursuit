@@ -25,6 +25,7 @@ opt_iter = 500
 np.random.seed(416)
 torch.manual_seed(647)
 
+
 def do_bayesian_optimization(agent_type, data, pp_id, goals):
     """
     Perform Bayesian optimization using the data from the participant specified by pp_id
@@ -66,26 +67,6 @@ def do_bayesian_optimization(agent_type, data, pp_id, goals):
         n_params = 4
         probe_points = [{'attention_cost': 30., 'exp_param': 0.03, 'step_size': 0, 'vm_param': 2.}]
 
-    elif agent_type == 'sparse_max_continuous_per_variable':
-        cost_function = make_individual_cost_function(human_data=completed_data, pp_id=pp_id, goals=goals,
-                                                      agent_type=agent_type, continuous_attention=True,
-                                                      use_exo_cost=use_exo_cost, exo_cost=exo_cost,
-                                                      decision_type='per_variable')
-        pbounds = {'attention_cost': (0., 30.), 'exp_param': exp_range,
-                   'vm_param': vm_range, 'step_size': step_size_range}
-        probe_points = [{'attention_cost': 30., 'exp_param': 0.03, 'vm_param': 2., 'step_size': 0.}]
-        n_params = 4
-
-    elif agent_type == 'sparse_least_squares':
-        cost_function = make_individual_cost_function(human_data=completed_data, pp_id=pp_id, goals=goals,
-                                                      agent_type=agent_type, continuous_attention=True,
-                                                      use_exo_cost=use_exo_cost, exo_cost=exo_cost,
-                                                      decision_type='least_squares')
-        pbounds = {'attention_cost': (0., 30.), 'exp_param': exp_range,
-                   'vm_param': vm_range, 'step_size': step_size_range}
-        probe_points = [{'attention_cost': 30., 'exp_param': 0.03, 'vm_param': 2., 'step_size': 0.}]
-        n_params = 4
-
     elif agent_type == 'hill_climbing':
         cost_function = make_individual_cost_function(human_data=completed_data, pp_id=pp_id, goals=goals,
                                                       agent_type=agent_type, continuous_attention=True,
@@ -96,16 +77,6 @@ def do_bayesian_optimization(agent_type, data, pp_id, goals):
         n_params = 3
         probe_points = [{'attention_cost': 0., 'exp_param': 0.03, 'step_size': 0., 'vm_param': 2.}]
 
-    elif agent_type == 'hill_climbing_least_squares':
-        cost_function = make_individual_cost_function(human_data=completed_data, pp_id=pp_id, goals=goals,
-                                                      agent_type=agent_type, continuous_attention=True,
-                                                      use_exo_cost=use_exo_cost, exo_cost=exo_cost,
-                                                      decision_type='least_squares')
-        pbounds = {'attention_cost': (0., 0.), 'exp_param': exp_range,
-                   'vm_param': vm_range, 'step_size': step_size_range}
-        probe_points = [{'attention_cost': 0., 'exp_param': 0.03, 'vm_param': 2., 'step_size': 0.}]
-        n_params = 3
-
     elif agent_type == 'sparse_lqr':
         # Sparse LQR Model
         cost_function = make_individual_cost_function(human_data=completed_data, pp_id=pp_id, goals=goals,
@@ -113,7 +84,7 @@ def do_bayesian_optimization(agent_type, data, pp_id, goals):
                                                       use_exo_cost=use_exo_cost, exo_cost=exo_cost)
         pbounds = {'exp_param': exp_range, 'vm_param': vm_range, 'attention_cost': (0., 300.)}
         probe_points = [{'exp_param': 0.03, 'vm_param': 2., 'attention_cost': 300.}]
-        n_params = 2
+        n_params = 3
 
     else:
         # LQR Model
