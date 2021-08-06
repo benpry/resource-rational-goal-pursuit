@@ -164,6 +164,16 @@ def run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost
     log_likelihoods.append(human_and_agent_states_to_log_likelihood(human_states, agent_states, exp_param, vm_param))
 
 
+def arccot(x):
+    """
+    compute arc cotangent of x, adding pi if result is nonpositive.
+    """
+    if x > 0:
+        return acot(x)
+    else:
+        return np.pi + acot(x)
+
+
 def to_spherical(vec):
     """
     Transform a vector of 5 dimensions to spherical coordinates
@@ -172,25 +182,36 @@ def to_spherical(vec):
     """
     r = np.linalg.norm(vec)
     if np.linalg.norm(np.delete(vec, [0])) == 0.:
-        phi_1 = 0.
+        if vec[0] >= 0:
+            phi_1 = 0.
+        else:
+            phi_1 = np.pi
     else:
-        phi_1 = float(acot(vec[0] / np.linalg.norm(np.delete(vec, [0]))))
+        phi_1 = float(arccot(vec[0] / np.sqrt(np.sum(np.delete(vec, [0]) ** 2))))
 
     if np.linalg.norm(np.delete(vec, [0, 1])) == 0.:
-        phi_2 = 0.
+        if vec[1] >= 0:
+            phi_2 = 0.
+        else:
+            phi_2 = np.pi
     else:
-        phi_2 = float(acot(vec[1] / np.linalg.norm(np.delete(vec, [0, 1]))))
+        phi_2 = float(arccot(vec[1] / np.sqrt(np.sum(np.delete(vec, [0, 1]) ** 2))))
 
     if np.linalg.norm(np.delete(vec, [0, 1, 2])) == 0.:
-        phi_3 = 0.
+        if vec[2] >= 0:
+            phi_3 = 0.
+        else:
+            phi_3 = np.pi
     else:
-        phi_3 = float(acot(vec[2] / np.linalg.norm(np.delete(vec, [0, 1, 2]))))
+        phi_3 = float(arccot(vec[2] / np.sqrt(np.sum(np.delete(vec, [0, 1, 2]) ** 2))))
 
     if vec[4] == 0.:
-        phi_4 = 0.
+        if vec[3] >= 0.:
+            phi_4 = 0.
+        else:
+            phi_4 = np.pi
     else:
-        phi_4 = 2 * float(acot(vec[3] + np.linalg.norm(np.delete(vec, [0, 1, 2])) / vec[4]))
-
+        phi_4 = 2 * float(arccot((vec[3] + np.sqrt(np.sum(np.delete(vec, [0, 1, 2]) ** 2))) / vec[4]))
     return np.array([phi_1, phi_2, phi_3, phi_4]), r
 
 
