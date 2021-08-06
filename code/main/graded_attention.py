@@ -21,7 +21,7 @@ def compute_uaa(A, B, S, s, g, use_exo_cost):
     ret = (num1 - num2) / squared_dist_to_goal
 
     # add the smallest possible diagonal matrix that makes the result invertible, for numerical stability
-    for d in [0.0001, 0.001, 0.01, 0.1, 1]:
+    for d in [1e-6, 1e-5, 1e-4, 1e-3, 1e-2]:
         if ret.det() == 0:
             ret += torch.eye(ret.shape[0]) * d
         else:
@@ -102,9 +102,9 @@ def analytic_attention(microworld, goal_scale, goal_state, t, attention_cost, st
                 continue
 
             ax = compute_uax(A, B, goal_scale, s, goal_state, False, loc, use_exo_cost)
-            cost_of_inattention = (A[loc].abs() * ax.dot(uaa.inverse().mv(ax))).abs()
+            cost_of_inattention = (A[loc] * ax.dot(uaa.inverse().mv(ax))).abs()
             if cost_of_inattention < 1e-20:
-                attention = 1
+                attention = 0
             else:
                 attention = max(1 - attention_cost / cost_of_inattention, 0)
             A_attention[loc] = attention
@@ -121,13 +121,14 @@ def analytic_attention(microworld, goal_scale, goal_state, t, attention_cost, st
                 continue
 
             ax = compute_uax(A, B, goal_scale, s, goal_state, True, loc, use_exo_cost)
-            cost_of_inattention = (B[loc].abs() * ax.dot(uaa.inverse().mv(ax))).abs()
+            cost_of_inattention = (B[loc] * ax.dot(uaa.inverse().mv(ax))).abs()
             if cost_of_inattention < 1e-20:
-                attention = 1
+                attention = 0
             else:
                 attention = max(1 - attention_cost / cost_of_inattention, 0)
             B_attention[loc] = attention
 
+    # Make sure that the diagonal of ones gets full attention
     for i in range(A.shape[0]):
         A_attention[i, i] = 1
 
