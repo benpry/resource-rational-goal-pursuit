@@ -23,7 +23,6 @@ Q = torch.zeros((5, 5), dtype=torch.float64)
 Qf = torch.diag(torch.tensor([1., 1., 1., 1., 1.], dtype=torch.float64))
 R = torch.diag(torch.tensor([0.01, 0.01, 0.01, 0.01], dtype=torch.float64))
 T = 10
-agent_class = 'sparse_max'
 exo_cost = 0.01
 use_exo_cost = True
 goal = torch.tensor([[0., 0., 0., 0., 0.], [1, 1, 1, 1, 1]], dtype=torch.float64)
@@ -33,6 +32,7 @@ exp_param_default = 5.
 vm_param_default = 40
 np.random.seed(21)
 torch.manual_seed(22)
+
 
 def generate_sparsemax_data(continuous_attention, goal, init_endogenous, use_exo_cost, attention_cost, step_size,
                             exp_param=exp_param_default, vm_param=vm_param_default, add_noise=False):
@@ -45,7 +45,7 @@ def generate_sparsemax_data(continuous_attention, goal, init_endogenous, use_exo
         macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous, subgoal_dimensions=[0, 1, 2, 3, 4],
                                            nr_subgoals=0,
                                            init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64), T=T,
-                                           final_goal=goal, clamp=clamp, agent_class=agent_class, lr=step_size,
+                                           final_goal=goal, clamp=clamp, lr=step_size,
                                            cost=attention_cost, von_mises_parameter=vm_param,
                                            exponential_parameter=exp_param, continuous_attention=continuous_attention,
                                            use_exo_cost=use_exo_cost, exo_cost=exo_cost, step_with_model=True,
@@ -54,7 +54,7 @@ def generate_sparsemax_data(continuous_attention, goal, init_endogenous, use_exo
         macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous, subgoal_dimensions=[0, 1, 2, 3, 4],
                                            nr_subgoals=0,
                                            init_exogenous=torch.tensor([0., 0., 0., 0.],dtype=torch.float64), T=T,
-                                           final_goal=goal, clamp=clamp, agent_class=agent_class, lr=step_size,
+                                           final_goal=goal, clamp=clamp, lr=step_size,
                                            cost=attention_cost, continuous_attention=continuous_attention,
                                            use_exo_cost=use_exo_cost, exo_cost=exo_cost, step_with_model=False,
                                            verbose=False)
@@ -117,22 +117,16 @@ def generate_sparse_lqr_data(init_endogenous, attention_cost, exp_param=exp_para
     agent_states = []
 
     state = init_endogenous
-    if add_noise:
-        for i in range(10):
-            mw = Microworld(A, B, state, von_mises_parameter=vm_param, exponential_parameter=exp_param)
-            agent = SparseLQRAgent(A, B, Q, Qf, R, T - i, state, attention_cost)
-            actions = agent.get_actions()
-            mw.step_with_model(actions[0])
-            state = mw.endogenous_state
-            agent_states.append(state)
-    else:
-        agent = SparseLQRAgent(A, B, Q, Qf, R, T, state, attention_cost)
+    for i in range(10):
+        mw = Microworld(A, B, state, von_mises_parameter=vm_param, exponential_parameter=exp_param)
+        agent = SparseLQRAgent(A, B, Q, Qf, R, T - i, state, attention_cost * (T - i) / T)
         actions = agent.get_actions()
-        mw = Microworld(A, B, state)
-        for action in actions:
-            mw.step(action)
-            state = mw.endogenous_state
-            agent_states.append(state)
+        if add_noise:
+            mw.step_with_model(actions[0])
+        else:
+            mw.step(actions[0])
+        state = mw.endogenous_state
+        agent_states.append(state)
 
     return agent_states
 
@@ -153,8 +147,7 @@ def compute_sparsemax_log_likelihood(states, continuous_attention, goal, init_en
                                                subgoal_dimensions=[0, 1, 2, 3, 4],
                                                nr_subgoals=0,
                                                init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64), T=T,
-                                               final_goal=goal, clamp=clamp, agent_class=agent_class,
-                                               cost=ac, lr=ss,  von_mises_parameter=vm,
+                                               final_goal=goal, clamp=clamp, cost=ac, lr=ss,  von_mises_parameter=vm,
                                                exponential_parameter=exp,
                                                continuous_attention=continuous_attention,
                                                use_exo_cost=use_exo_cost, exo_cost=exo_cost, step_with_model=False,
@@ -392,7 +385,7 @@ def compute_hill_climbing_log_likelihood(states, goal, init_endogenous, clusters
                                                subgoal_dimensions=[0, 1, 2, 3, 4],
                                                nr_subgoals=0,
                                                init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64), T=T,
-                                               final_goal=goal, clamp=clamp, agent_class=agent_class, cost=0,
+                                               final_goal=goal, clamp=clamp, cost=0,
                                                lr=ss, von_mises_parameter=vm, exponential_parameter=exp,
                                                continuous_attention=True,
                                                use_exo_cost=use_exo_cost, exo_cost=exo_cost, step_with_model=False,

@@ -91,7 +91,7 @@ if __name__ == "__main__":
                                                        subgoal_dimensions=[0, 1, 2, 3, 4],
                                                        nr_subgoals=0, init_exogenous=torch.tensor([0., 0., 0., 0.],
                                                                                                   dtype=torch.float64),
-                                                       T=T, final_goal=goal, clamp=25, agent_class=agent_type,
+                                                       T=T, final_goal=goal, clamp=25,
                                                        cost=attention_cost, lr=step_size,
                                                        von_mises_parameter=vm_param,
                                                        exponential_parameter=exp_param,

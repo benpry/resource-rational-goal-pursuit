@@ -112,7 +112,7 @@ def run_lqr_once(A, B, situation, human_data, exo_cost, log_likelihoods, exp_par
             lqr_agent = OptimalAgent(A, B, Q, Qf, R, T=n_rounds - t, init_endogenous=init_endogenous)
         else:
             lqr_agent = SparseLQRAgent(A, B, Q, Qf, R, T=n_rounds - t, init_endogenous=init_endogenous,
-                                       attention_cost=attention_cost)
+                                       attention_cost=attention_cost * (n_rounds - t) / n_rounds)
         agent_action = lqr_agent.get_actions()[0]
 
         # define the microworld and take a step in it
@@ -151,7 +151,7 @@ def run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost
         env = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous, nr_subgoals=0,
                                    subgoal_dimensions=subgoal_dimensions, lr=step_size,
                                    init_exogenous=init_exogenous, T=10, final_goal=final_goal,
-                                   cost=attention_cost, clamp=25, agent_class=agent_type,
+                                   cost=attention_cost, clamp=25,
                                    exponential_parameter=exp_param, von_mises_parameter=vm_param,
                                    step_with_model=False, exo_cost=exo_cost, continuous_attention=continuous_attention,
                                    use_exo_cost=use_exo_cost, use_input_cost=use_input_cost, input_cost=input_cost,
@@ -286,8 +286,7 @@ def make_individual_cost_function(human_data=None, pp_id=None, goals=None, agent
     return cost_function_individual
 
 
-def return_run_data(A, B, step_size, attention_cost, clamp, final_goal, init_endogenous,
-                    agent_class=None, von_mises_parameter=None, exponential_parameter=None,
+def return_run_data(A, B, step_size, attention_cost, clamp, final_goal, init_endogenous, von_mises_parameter=None, exponential_parameter=None,
                     step_with_model=None, continuous_attention=True, use_exo_cost=False, exo_cost=0.01,
                     final_value=20000):
     """
@@ -300,7 +299,7 @@ def return_run_data(A, B, step_size, attention_cost, clamp, final_goal, init_end
 
     env = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous, nr_subgoals=0,
                                subgoal_dimensions=subgoal_dimensions, lr=step_size, init_exogenous=init_exogenous, T=20,
-                               final_goal=final_goal, cost=attention_cost, clamp=clamp, agent_class=agent_class,
+                               final_goal=final_goal, cost=attention_cost, clamp=clamp,
                                von_mises_parameter=von_mises_parameter, exponential_parameter=exponential_parameter,
                                step_with_model=step_with_model, continuous_attention=continuous_attention,
                                use_exo_cost=use_exo_cost, exo_cost=exo_cost, verbose=False)
@@ -339,7 +338,7 @@ def generate_agent_data(goals, step_size, attention_cost=None, step_with_model=N
         B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]])
         if goal_id == 0:
             agent_data_all, closeness, final_reached = return_run_data(A, B, step_size, attention_cost, 25, final_goal,
-                                                                       init_endogenous, agent_class=agent_type,
+                                                                       init_endogenous,
                                                                        step_with_model=step_with_model,
                                                                        final_value=20000,
                                                                        continuous_attention=continuous_attention,
@@ -352,7 +351,7 @@ def generate_agent_data(goals, step_size, attention_cost=None, step_with_model=N
         else:
             diff += 1
             agent_data, closeness, final_reached = return_run_data(A, B, step_size, attention_cost, 25, final_goal,
-                                                                   init_endogenous, agent_class=agent_type,
+                                                                   init_endogenous,
                                                                    step_with_model=step_with_model,
                                                                    final_value=20000,
                                                                    continuous_attention=continuous_attention,

@@ -13,7 +13,7 @@ class MicroworldMacroAgent:
     This class acts as a wrapper for other agent classes.
     """
     def __init__(self, A=None, B=None, init_endogenous=None, subgoal_dimensions=None, nr_subgoals=0,
-                 init_exogenous=None, T=None, final_goal=None, lr=None, clamp=None, cost=None, agent_class=None,
+                 init_exogenous=None, T=None, final_goal=None, lr=None, clamp=None, cost=None,
                  von_mises_parameter=None, exponential_parameter=None, step_with_model=False, decision=None,
                  exo_cost=None, use_exo_cost=False, continuous_attention=False, use_input_cost=False,
                  input_cost=False, decision_type=None, verbose=True):
@@ -28,7 +28,6 @@ class MicroworldMacroAgent:
         lr: not sure about this yet
         clamp: not sure
         cost: not sure
-        agent_class: the type of agent
         step_with_model: whether to use the noise model on each step
         decision: not sure yet, fits into sparsemax model
         verbose: whether to print things out
@@ -46,7 +45,6 @@ class MicroworldMacroAgent:
         self.subgoals_reached_t = []
         self.final_goal_dist_all = []
         self.closeness_all = []
-        self.agent_class = agent_class
         self.costs_all = []
         self.final_goal_reached_all = []
         self.all_endogenous = []
