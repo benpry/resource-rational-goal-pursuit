@@ -66,7 +66,7 @@ def generate_sparsemax_data(continuous_attention, goal, init_endogenous, use_exo
     return agent_states
 
 
-def generate_nm2_data(init_endogenous, exp_param=exp_param_default, vm_param=vm_param_default, add_noise=True):
+def generate_nm2_data(init_endogenous, exp_param=exp_param_default, vm_param=vm_param_default, add_noise=False):
     """
     generate the data using the sparsemax model, assuming it is correct
     """

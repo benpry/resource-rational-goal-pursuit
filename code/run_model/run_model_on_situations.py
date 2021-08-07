@@ -204,7 +204,8 @@ if __name__ == "__main__":
 
                     if not noise:
                         break
-
+            elif agent_type == "lqr":  # we run the lqr on its own in a separate file
+                continue
             else:
                 raise RuntimeError("unrecognized agent type")
 
