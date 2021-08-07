@@ -1,2 +1,2 @@
 situation,generating_model,sparse_max_continuous,sparse_max_discrete,sparse_lqr,lqr,nm1,nm2,hc
-"[-32.0, 39.0, 75.0, 175.0, 6.0]",sparse_max_discrete,-46.725097,5.093821,-106.746882,-95.943779,-47.989506,-46.162048,-46.274245
+"[-32.0, 39.0, 75.0, 175.0, 6.0]",hill_climbing,-28.173516,-33.367388,-59.230558,-53.520611,-34.201752,-34.188232,8.669947
