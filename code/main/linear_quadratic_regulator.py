@@ -165,7 +165,7 @@ class SparseLQRAgent:
                 B[i[1], i[2]] = 0.
 
         # set up a microworld with A and B
-        env = Microworld(A=A, B=B, init=self.endogenous, agent="hillclimbing")
+        env = Microworld(A=A, B=B, init=self.endogenous)
 
         return env
 
@@ -229,19 +229,22 @@ class SparseLQRAgent:
         # focus on only the parts of the microworld the agent is paying attention to
         microworld_attention = self.create_attention_mv(test_attention_vector)
 
+        # compute the sequence of optimal actions
         action_sequence = self.compute_optimal_sequence(microworld_attention)
 
+        # simulate a trajectory through the real microworld with the chosen actions
         for i in range(len(action_sequence)):
             microworld.step(action_sequence[i])
 
+        # get the final state and reset the real microworld
         final_state = microworld.endogenous_state
-
         microworld.endogenous_state = endogenous
 
+        # compute the full (squared) cost function
         full_cost = final_state.matmul(self.Qf).dot(final_state)\
             + sum([a.matmul(self.R).dot(a) for a in action_sequence])
 
-        # compute number of non-zero connections and connections between endogenous variables
+        # compute number of non-zero connections
         non_zero_connections = microworld_attention.A.flatten() != 0.
         self_connections = microworld_attention.A.flatten() != 1.
 
@@ -251,11 +254,13 @@ class SparseLQRAgent:
 
         cost = np.sqrt(full_cost) + self.attention_cost * cost_edges
 
-        best_attention_vector.pop(-1)
+        # remove the newly-added edge
+        if new_edge:
+            best_attention_vector.pop(-1)
 
         return action_sequence, cost
 
-    def find_best_attention_vector_of_size_k(self, iteration, best_attention_vector, list_of_edges, microworld):
+    def find_best_attention_vector_of_size_k(self, best_attention_vector, list_of_edges, microworld):
         """
         Find the best attention vector of size k. I.e. if you can only pay attention to k relationships, which
         should they be?
@@ -298,13 +303,16 @@ class SparseLQRAgent:
 
         microworld = Microworld(A=self.A, B=self.B, init=self.endogenous)
 
-        for i, attention_vector_size in enumerate(range(1, len(list_of_edges) + 1)):
-            if i == 0:
-                best_attention_vector = []
-            # get the best attention vector with size i, along with its performance, edges, etc.
-            best_attention_vector, performance, list_of_edges, best_exogenous = \
-                self.find_best_attention_vector_of_size_k(i, best_attention_vector, list_of_edges, microworld)
-            # deepcopy
+        for i, attention_vector_size in enumerate(range(len(list_of_edges) + 1)):
+            if attention_vector_size == 0:
+                # test the attention vector that attends to everything
+                best_exogenous, performance = self.test_attention_vector([], microworld)
+                performance = performance.item()
+            else:
+                # get the best attention vector with size i, along with its performance, edges, etc.
+                best_attention_vector, performance, list_of_edges, best_exogenous = \
+                    self.find_best_attention_vector_of_size_k(best_attention_vector, list_of_edges, microworld)
+                # deepcopy
             best_all_sizes.append(best_attention_vector[:])
             best_all_sizes_performance.append(performance)
             best_exogenous_all_sizes.append(best_exogenous)

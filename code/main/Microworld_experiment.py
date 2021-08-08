@@ -11,21 +11,19 @@ class Microworld:
     """
     Represents a simulated micro-world (SMW) with endogenous variables and exogenous inputs.
     """
-    def __init__(self, A=None, B=None, init=None, von_mises_parameter=None, exponential_parameter=None, agent=None):
+    def __init__(self, A=None, B=None, init=None, von_mises_parameter=None, exponential_parameter=None):
         """
         A: transition matrix for endogenous variables
         B: transition matrix for exogenous variables
         init: the initial endogenous state of the system
         von_mises_parameter: the parameter for the exponential distribution (length noise)
         exponential_parameter: the concentration parameter for the von mises distribution (radial noise)
-        agent: the class for the agent navigating the environment
         """
-        # initialize the endogenouse state and agent
+        # initialize the endogenous state, making sure it is a tensor
         if type(init) != torch.Tensor:
             self.endogenous_state = torch.tensor(init, dtype=torch.float64)
         else:
             self.endogenous_state = init
-        self.agent = agent
 
         # initialize the transition matrices
         self.A = A  # matrix endogenous_n x endogenous_n
@@ -36,18 +34,15 @@ class Microworld:
         self.exponential_parameter = exponential_parameter
 
     def step(self, action):
-        """Sets new endogenous state after applying new setting of exogenous variables (action/intervention)."""
-        self.endogenous_state = torch.matmul(self.A, self.endogenous_state.t()).t() + torch.matmul(self.B, action.t())\
-            .t()
+        """Updates the endogenous state by applying an action without noise."""
+        self.endogenous_state = self.A.mv(self.endogenous_state) + self.B.mv(action)
 
     def step_with_model(self, action, noise=True):
         """
-        Generates a new state by first adding noise to both the length and angles of the spherical coordinates of a new
-        state.
+        Updates the endogenous state by applying an action, possibly with noise if noise is set to true
         """
         # update endogenous state
-        self.endogenous_state = torch.matmul(self.A, self.endogenous_state.t()).t() + torch.matmul(self.B, action.t())\
-            .t()
+        self.endogenous_state = self.A.mv(self.endogenous_state) + self.B.mv(action)
 
         if not noise:
             return
@@ -63,9 +58,8 @@ class Microworld:
         angles += angle_noise
         length += length_noise
 
-        # turn spehrical coordinates back to standard coordingates and update endogenous state
+        # turn spherical coordinates back to Cartesian coordinates and update endogenous state
         self.endogenous_state = torch.tensor(self.to_endogenous(length, angles), dtype=torch.float64)
-        # print('after', self.endogenous_state)
 
     def arccot(self, x):
         """

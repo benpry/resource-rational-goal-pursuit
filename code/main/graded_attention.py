@@ -9,7 +9,7 @@ import itertools
 from linear_quadratic_regulator import OptimalAgent
 
 
-def compute_uaa(A, B, S, s, g, use_exo_cost):
+def compute_uaa(A, B, S, s, g):
     """
     Computes the uaa term for analytic attention
     """
@@ -29,7 +29,7 @@ def compute_uaa(A, B, S, s, g, use_exo_cost):
     return ret
 
 
-def compute_uax(A, B, S, s, g, is_in_B, loc, use_exo_cost):
+def compute_uax(A, B, S, s, g, is_in_B, loc):
     """
     Computes the uax term in the analytic attention
     """
@@ -54,22 +54,6 @@ def compute_uax(A, B, S, s, g, is_in_B, loc, use_exo_cost):
 
         return (num1 - num2) / squared_dist_to_goal
 
-
-def reduce_microworld(microworld, m):
-    """
-    Apply attention matrix m to reduce the microworld
-
-    microworld: the microworld to reduce
-    m: the attention matrix
-    """
-    A_m = microworld.A * m[:, :microworld.A.shape[1]]
-    B_m = microworld.B * m[:, microworld.A.shape[1]:]
-
-    reduced_microworld = Microworld(A_m, B_m, init=microworld.endogenous_state, agent='hillclimbing')
-
-    return reduced_microworld
-
-
 def distance(s, g, scale):
     """
     Compute distance from state s to goal g
@@ -78,8 +62,7 @@ def distance(s, g, scale):
                                    (s - g).t()))
 
 
-def analytic_attention(microworld, goal_scale, goal_state, t, attention_cost, step_size, clamp, use_exo_cost, exo_cost,
-                       decision_type):
+def analytic_attention(microworld, goal_scale, goal_state, attention_cost, step_size, exo_cost):
     """
     Computes the continuous attention and optimal action in the reduced micro-world analytically using a Taylor
     approximation.
@@ -89,7 +72,7 @@ def analytic_attention(microworld, goal_scale, goal_state, t, attention_cost, st
     s = microworld.endogenous_state
 
     # first compute the amount of attention to pay to each relationship
-    uaa = compute_uaa(A, B, goal_scale, s, goal_state, use_exo_cost)
+    uaa = compute_uaa(A, B, goal_scale, s, goal_state)
     A_attention = torch.zeros(A.shape)
     for i in range(A.shape[0]):
         for j in range(A.shape[1]):
@@ -101,7 +84,7 @@ def analytic_attention(microworld, goal_scale, goal_state, t, attention_cost, st
                 A_attention[loc] = 1
                 continue
 
-            ax = compute_uax(A, B, goal_scale, s, goal_state, False, loc, use_exo_cost)
+            ax = compute_uax(A, B, goal_scale, s, goal_state, False, loc)
             cost_of_inattention = (A[loc] * ax.dot(uaa.inverse().mv(ax))).abs()
             if cost_of_inattention < 1e-20:
                 attention = 0
@@ -120,7 +103,7 @@ def analytic_attention(microworld, goal_scale, goal_state, t, attention_cost, st
                 B_attention[loc] = 1
                 continue
 
-            ax = compute_uax(A, B, goal_scale, s, goal_state, True, loc, use_exo_cost)
+            ax = compute_uax(A, B, goal_scale, s, goal_state, True, loc)
             cost_of_inattention = (B[loc] * ax.dot(uaa.inverse().mv(ax))).abs()
             if cost_of_inattention < 1e-20:
                 attention = 0
@@ -141,103 +124,27 @@ def analytic_attention(microworld, goal_scale, goal_state, t, attention_cost, st
     current_goal_dist = distance(s, goal_state, goal_scale)
 
     # create a new micro-world with the attention-reduced matrices
-    reduced_microworld = Microworld(A_reduced, B_reduced, init=s, agent='hillclimbing')
+    reduced_microworld = Microworld(A_reduced, B_reduced, init=s)
 
-    # this is for backwards-compatibility with an older version of the task. use_exo_cost should be true for the
-    # most recent version.
-    if use_exo_cost:
+    # compute the gradient
+    gradient = -torch.matmul(torch.div(
+        torch.matmul(goal_scale, (A_reduced.mv(s) - goal_state)), current_goal_dist),
+        B_reduced)
 
-        # compute the gradient
-        gradient = -torch.matmul(torch.div(
-            torch.matmul(goal_scale, (A_reduced.mv(s) - goal_state)), current_goal_dist),
-            B_reduced)
-
-        # Implementations of different possible decision functions. We ultimately decided to only use the gradient
-        # with optimal step size, which is implemented in the "else" part of this if statement.
-        if decision_type == 'least_squares':
-            direction = np.linalg.lstsq(B_reduced, goal_state - A_reduced.mv(s), rcond=None)
-            direction = torch.tensor(direction[0])
-
-            if direction.norm() == 0:
-                opt_step_size = 0
-            else:
-                opt_step_size = - goal_scale.inverse().matmul(A_reduced.mv(s) - goal_state).dot(B_reduced.mv(direction))\
-                                / (B_reduced.mv(direction).matmul(goal_scale.inverse()).dot(B_reduced.mv(direction))
-                                   + exo_cost * (direction.dot(direction)))
-
-            exogenous = step_size * opt_step_size * direction
-
-            reduced_microworld.step(exogenous)
-
-            loss = distance(reduced_microworld.endogenous_state, goal_state, goal_scale)**2 \
-                + attention_cost * (torch.sum(A_reduced) - A.shape[0] + torch.sum(B_reduced)) + \
-                exo_cost * exogenous.dot(exogenous)
-
-        elif decision_type == 'per_variable':
-            variable_order = s.abs().numpy().argsort()
-            exogenous = torch.zeros(B.shape[1])
-
-            for _ in range(len(s)):
-                i = np.argmin(variable_order)
-                variable_order[i] = len(s)
-
-                # get the index of the corresponding exogenous variable
-                exo_i = B_reduced[i, :].abs().argmax()
-                direction = torch.zeros(B.shape[1])
-                direction[exo_i] = 1.
-
-                var_size = -(A_reduced.mv(s) + B_reduced.mv(exogenous)).dot(B_reduced.mv(direction)) /\
-                    (B_reduced.mv(direction).dot(B_reduced.mv(direction)) + exo_cost)
-
-                exogenous[exo_i] += var_size
-
-            exogenous *= step_size
-
-            loss = distance(reduced_microworld.endogenous_state, goal_state, goal_scale) ** 2 \
-                + attention_cost * (torch.sum(A_reduced) - A.shape[0] + torch.sum(B_reduced)) + \
-                exo_cost * exogenous.dot(exogenous)
-
-        elif decision_type == 'one_step_lqr':
-            Q = torch.tensor([[0., 0., 0., 0., 0.], [0., 0., 0., 0., 0.], [0., 0., 0., 0., 0.],
-                              [0., 0., 0., 0., 0.], [0., 0., 0., 0., 0.]])
-            Qf = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., 0.], [0., 0., 1., 0., 0.],
-                               [0., 0., 0., 1., 0.], [0., 0., 0., 0., 1.]])
-            R = torch.tensor([[0.01, 0., 0., 0.], [0., 0.01, 0., 0.], [0., 0., 0.01, 0.], [0., 0., 0., 0.01]])
-
-            opt_agent = OptimalAgent(A_reduced, B_reduced, Q, Qf, R, 1, s)
-            opt_action = opt_agent.get_actions()[0]
-            exogenous = opt_action * step_size
-
-            reduced_microworld.step(exogenous)
-
-            loss = distance(reduced_microworld.endogenous_state, goal_state, goal_scale)**2 \
-                + attention_cost * (torch.sum(A_reduced) - A.shape[0] + torch.sum(B_reduced)) + \
-                exo_cost * exogenous.dot(exogenous)
-        else:
-            # compute the optimal step size to take
-            if gradient.norm() == 0:
-                opt_step_size = 0
-            else:
-                opt_step_size = - goal_scale.inverse().matmul(A_reduced.mv(s) - goal_state).dot(B_reduced.mv(gradient))\
-                                / (B_reduced.mv(gradient).matmul(goal_scale.inverse()).dot(B_reduced.mv(gradient))
-                                   + exo_cost * (gradient.dot(gradient)))
-
-            exogenous = step_size * opt_step_size * gradient
-
-            reduced_microworld.step(exogenous)
-
-            loss = distance(reduced_microworld.endogenous_state, goal_state, goal_scale)**2 \
-                + attention_cost * (torch.sum(A_reduced) - A.shape[0] + torch.sum(B_reduced)) + \
-                exo_cost * exogenous.dot(exogenous)
+    # compute the optimal step size to take
+    if gradient.norm() == 0:
+        opt_step_size = 0
     else:
-        # this code is from an older version of the task
-        exogenous = step_size * gradient
-        if exogenous.abs().sum() > clamp:
-            exogenous = (clamp / exogenous.abs().sum()) * exogenous
+        opt_step_size = - goal_scale.inverse().matmul(A_reduced.mv(s) - goal_state).dot(B_reduced.mv(gradient))\
+                        / (B_reduced.mv(gradient).matmul(goal_scale.inverse()).dot(B_reduced.mv(gradient))
+                           + exo_cost * (gradient.dot(gradient)))
 
-        reduced_microworld.step(exogenous)
+    exogenous = step_size * opt_step_size * gradient
 
-        loss = distance(reduced_microworld.endogenous_state, goal_state, goal_scale) \
-            + attention_cost * (torch.sum(A_reduced) - A.shape[0] + torch.sum(B_reduced))
+    reduced_microworld.step(exogenous)
+
+    loss = distance(reduced_microworld.endogenous_state, goal_state, goal_scale)**2 \
+        + attention_cost * (torch.sum(A_reduced) - A.shape[0] + torch.sum(B_reduced)) + \
+        exo_cost * exogenous.dot(exogenous)
 
     return (exogenous, loss, total_ignorance)
