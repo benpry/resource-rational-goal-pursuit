@@ -269,9 +269,7 @@ class SparseLQRAgent:
 
         # keep trying to add an edge and see how it affects the performance
         for new_edge in list_of_edges:
-            # Want first edge to be an edge between edogenous and endogenous
-            if iteration == 0 and new_edge[0] == 'var_source':
-                continue
+            # test the resulting attention vector
             action_sequence, cost = self.test_attention_vector(best_attention_vector, microworld, new_edge=new_edge)
 
             # add the performance and action to the list of existing states and actions
