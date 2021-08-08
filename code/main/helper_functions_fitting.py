@@ -258,23 +258,16 @@ def make_individual_cost_function(human_data=None, pp_id=None, goals=None, agent
         B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
                          dtype=torch.float64)
 
-        log_likelihoods = []
         # run the agent and get the log-likelihood
         if agent_type in ('lqr', 'sparse_lqr'):
-            log_likelihoods.append(run_lqr_once(A, B, goal[1], human_data, exo_cost, exp_param, vm_param, n_rounds=10,
-                         attention_cost=attention_cost))
+            log_likelihood = run_lqr_once(A, B, goal[1], human_data, exo_cost, exp_param, vm_param, n_rounds=10,
+                                          attention_cost=attention_cost)
         else:
-            for i in range(25):
+            log_likelihood = run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost, agent_type,
+                                            exo_cost, exp_param, vm_param, continuous_attention)
 
-                log_likelihoods.append(run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost, agent_type,
-                               exo_cost, exp_param, vm_param, continuous_attention))
-
-                # this line is here for backwards-compatibility with an older version of the discrete sparse-max model
-                if agent_type != 'sparse_max_softmax':
-                    break
-
-        # return the log-likelihood (or mean across several runs)
-        return np.mean(log_likelihoods)
+        # return the log-likelihood
+        return log_likelihood
 
     return cost_function_individual
 
