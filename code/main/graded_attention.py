@@ -4,10 +4,6 @@ use continuous attention.
 """
 import torch
 from Microworld_experiment import Microworld
-import numpy as np
-import itertools
-from linear_quadratic_regulator import OptimalAgent
-
 
 def compute_uaa(A, B, S, s, g):
     """

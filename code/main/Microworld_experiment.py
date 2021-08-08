@@ -35,7 +35,8 @@ class Microworld:
 
     def step(self, action):
         """Updates the endogenous state by applying an action without noise."""
-        self.endogenous_state = self.A.mv(self.endogenous_state) + self.B.mv(action)
+        self.endogenous_state = torch.matmul(self.A, self.endogenous_state.t()).t() + torch.matmul(self.B, action.t())\
+            .t()
 
     def step_with_model(self, action, noise=True):
         """

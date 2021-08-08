@@ -64,8 +64,7 @@ def do_bayesian_optimization(agent_type, data, pp_id, goals):
     elif agent_type == 'hill_climbing':
         cost_function = make_individual_cost_function(human_data=completed_data, pp_id=pp_id, goals=goals,
                                                       agent_type=agent_type, continuous_attention=True,
-                                                      exo_cost=exo_cost,
-                                                      decision_type='gradient_opt_step_size')
+                                                      exo_cost=exo_cost)
         pbounds = {'attention_cost': (0., 0.), 'exp_param': exp_range, 'step_size': step_size_range,
                    'vm_param': vm_range}
         n_params = 3
