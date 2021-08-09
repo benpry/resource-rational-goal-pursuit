@@ -6,7 +6,6 @@ import torch
 from Microworld_experiment import Microworld
 from MicroworldMacroAgent import MicroworldMacroAgent
 import ast
-import pandas as pd
 from mpmath import *
 from scipy.special import i0
 from linear_quadratic_regulator import OptimalAgent, SparseLQRAgent
@@ -51,7 +50,7 @@ def human_and_agent_states_to_log_likelihood(human_states, agent_states, ld, k):
         angles_h, length_h = to_spherical(human_state)
         angles_a, length_a = to_spherical(agent_state)
         # compute the differences between angles and lengths
-        angles_diff = np.sqrt((angles_h - angles_a) ** 2)
+        angles_diff = angles_h - angles_a
         all_angles.append(angles_diff)
         distances_length.append(np.sqrt((length_h - length_a) ** 2))
 
@@ -109,8 +108,8 @@ def run_lqr_once(A, B, situation, human_data, exo_cost, exp_param, vm_param, n_r
     return human_and_agent_states_to_log_likelihood(human_states, agent_states, exp_param, vm_param)
 
 
-def run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost, agent_type, exo_cost,
-                   exp_param, vm_param, continuous_attention):
+def run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost, exo_cost,
+                   exp_param, vm_param, continuous_attention, n_rounds=10):
     """
     Run the agent of the specified type once, starting from the previous human state on each iteration
     """
@@ -121,7 +120,7 @@ def run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost
     agent_states = []
     human_states = []
 
-    for t in range(10):
+    for t in range(n_rounds):
         if t > 0:
             init_endogenous = ast.literal_eval(human_data.iloc[t - 1]['endogenous'])
         # in case not all 10 timesteps are recorded for a pp
@@ -133,14 +132,14 @@ def run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost
         # define a goal pursuit agent
         agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous,
                                      subgoal_dimensions=subgoal_dimensions, lr=step_size,
-                                     init_exogenous=init_exogenous, T=10, final_goal=final_goal,
+                                     init_exogenous=init_exogenous, T=n_rounds - t, final_goal=final_goal,
                                      cost=attention_cost, exponential_parameter=exp_param,
                                      von_mises_parameter=vm_param, step_with_model=False, exo_cost=exo_cost,
                                      continuous_attention=continuous_attention, verbose=False)
 
         # take a step with the agent
         _, s_next, _ = agent.step(stop_t=1)
-        # append the newxt human and agent states
+        # append the next human and agent states
         agent_states.append(s_next.numpy())
         human_states.append(next_state_human)
 
@@ -221,10 +220,11 @@ def make_individual_cost_function(human_data=None, pp_id=None, goals=None, agent
     Returns a cost function for Bayesian optimization that applies to one goal
 
     human_data : data of all pps
-    pp_id : Id of pp currently fitting a model to
-    goals: all situations used in experiment#
-    weighting: scaler in [0,1], deciding on the weight to put on euclidean distance vs angles
+    pp_id : id of the participant we are currently fitting a model to
+    goals: all situations used in experiment
     agent_type: the model we're fitting
+    continuous_attention: whether to use continuous or discrete attention (for sparse hill_climbing)
+    exo_cost: the cost associated with exogenous actions in the environment
     """
 
     def cost_function_individual(step_size=None, attention_cost=None, human_data=human_data,
@@ -232,10 +232,10 @@ def make_individual_cost_function(human_data=None, pp_id=None, goals=None, agent
         """
         The actual cost function
 
-        learning_rate: learning rate of agent
-        cost_param: cost param of sparse-max agent
-        exponential_param: parameter of exponetial distribution of distances
-        von_mises_param: parameter of von mises distribution of angles
+        step_size: step size of agent
+        attention_cost: attention cost for the agent
+        exp_param: parameter of exponetial distribution for distances
+        vm_param: parameter of von mises distribution for angles
         """
         # filter out all but the data from the participant we're studying
         human_data = human_data[human_data['pp_id'] == pp_id]
@@ -263,8 +263,8 @@ def make_individual_cost_function(human_data=None, pp_id=None, goals=None, agent
             log_likelihood = run_lqr_once(A, B, goal[1], human_data, exo_cost, exp_param, vm_param, n_rounds=10,
                                           attention_cost=attention_cost)
         else:
-            log_likelihood = run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost, agent_type,
-                                            exo_cost, exp_param, vm_param, continuous_attention)
+            log_likelihood = run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost, exo_cost,
+                                            exp_param, vm_param, continuous_attention)
 
         # return the log-likelihood
         return log_likelihood
@@ -273,11 +273,11 @@ def make_individual_cost_function(human_data=None, pp_id=None, goals=None, agent
 
 def null_model(n, b, endogenous, goal_loc):
     """
-    Implementtation of null model 1, which randomly selects the variables to pay attention to, then sets the
+    Implementtation of null model 1, which randomly selects the endogenous variables to pay attention to, then sets the
     exogenous variables to random amounts in the direction of interest
     """
     # the exogenous-to-endogenous transition matrix
-    B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]])
+    B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]])
 
     # choose n endogenous variables to target
     target_vars = np.random.choice(5, n, p=[1 / 5] * 5)
@@ -300,7 +300,7 @@ def null_model(n, b, endogenous, goal_loc):
         else:
             input_var = possible_inputs[0]
 
-        exogenous[input_var] = exogenous_input # set the chosen exogenous variable
+        exogenous[input_var] = exogenous_input  # set the chosen exogenous variable
 
     return exogenous
 
@@ -323,10 +323,9 @@ def make_individual_cost_function_null_1(human_data=None, pp_id=None, goals=None
         goal_id = int(list(set(human_data['condition']))[0])
         goals = goals[goal_id]
         final_goal = torch.tensor(goals[0])
-        init_endogenous = goals[1]
         final_goal[1] = 1 / final_goal[1]
 
-
+        # set up the microworld environment
         A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
                           [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]], dtype=torch.float64)
         B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
@@ -336,10 +335,10 @@ def make_individual_cost_function_null_1(human_data=None, pp_id=None, goals=None
         log_likelihoods = []
         for i in range(10):
 
-            i += 1
             human_states = []
             agent_states = []
 
+            init_endogenous = goals[1]  # set init_endogenous to the starting value
             # iterate over timesteps in the experiment
             for t in range(10):
                 if t > 0:
@@ -381,7 +380,6 @@ def make_individual_cost_function_null_2(human_data=None, pp_id=None, goals=None
         goal_id = list(set(human_data['condition']))[0]
         goals = goals[goal_id]
         final_goal = torch.tensor(goals[0])
-        init_endogenous = goals[1]
         final_goal[1] = 1 / final_goal[1]
 
         # set up the transition matrices
@@ -392,6 +390,7 @@ def make_individual_cost_function_null_2(human_data=None, pp_id=None, goals=None
 
         agent_states = []
         human_states = []
+        init_endogenous = goals[1]
         for t in range(10):
             if t > 0:
                 init_endogenous = ast.literal_eval(str(human_data.iloc[t - 1]['endogenous']))

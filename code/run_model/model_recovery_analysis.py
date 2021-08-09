@@ -136,23 +136,26 @@ def compute_nm1_log_likelihood(states, init_endogenous):
 
         # round the n parameter
         n = int(round(n))
+        log_likelihoods = []
         data_states = [s.numpy() for s in states]
-        agent_states = []
-        for t in range(10):
-            if t == 0:
-                endogenous = init_endogenous
-            else:
-                endogenous = states[t-1]
+        for i in range(10):
+            agent_states = []
+            for t in range(10):
+                if t == 0:
+                    endogenous = init_endogenous
+                else:
+                    endogenous = states[t-1]
 
-            # set up the microworld
-            env = Microworld(A=A, B=B, init=endogenous)
-            # take a step inthe microworld
-            agent_input = torch.tensor(null_model(n, b, endogenous, torch.tensor([0, 0, 0, 0, 0], dtype=torch.float64)),
-                                       dtype=torch.float64)
-            env.step(agent_input.unsqueeze(0))
-            agent_states.append(env.endogenous_state.numpy()[0])
+                # set up the microworld
+                env = Microworld(A=A, B=B, init=endogenous)
+                # take a step inthe microworld
+                agent_input = torch.tensor(null_model(n, b, endogenous, torch.tensor([0, 0, 0, 0, 0], dtype=torch.float64)),
+                                           dtype=torch.float64)
+                env.step(agent_input.unsqueeze(0))
+                agent_states.append(env.endogenous_state.numpy()[0])
+            log_likelihoods.append(human_and_agent_states_to_log_likelihood(data_states, agent_states, exp, vm))
 
-        return human_and_agent_states_to_log_likelihood(data_states, agent_states, exp, vm)
+        return np.mean(log_likelihoods)
 
     pbounds = {'n': (1., 5.), 'b': (0., 50.), 'exp': exp_range, 'vm': vm_range}
 
