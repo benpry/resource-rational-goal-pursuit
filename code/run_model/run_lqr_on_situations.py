@@ -23,14 +23,10 @@ B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0
                  dtype=torch.float64)
 init_exogenous = [0., 0., 0., 0.]
 exo_cost = 0.01
-use_exo_cost = True
 T = 10
 
 # define the filepaths for the best-fitting parameters and situations
-params_filepath = '../../data/fitting_results/best_fitting_models.csv'
 situations_filepath = '../../data/experimental_data/experiment_conditions.csv'
-n_noisy = 10
-exp_param = 0.1
 
 OUTPUT_FOLDER = "../../data/qualitative_data"
 
@@ -39,7 +35,6 @@ if __name__ == "__main__":
     # read the situations and paramaters
     df_condition = pd.read_csv(situations_filepath)
     situations = df_condition['initial_endogenous']
-    df_params = pd.read_csv(params_filepath)
 
     # initialize lists for performances and exogenous inputs
     all_lqr_exo = []

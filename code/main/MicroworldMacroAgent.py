@@ -14,21 +14,18 @@ class MicroworldMacroAgent:
     """
     def __init__(self, A=None, B=None, init_endogenous=None, subgoal_dimensions=None,
                  init_exogenous=None, T=None, final_goal=None, lr=None, cost=None,
-                 von_mises_parameter=None, exponential_parameter=None, step_with_model=False, decision=None,
-                 exo_cost=None, continuous_attention=False, use_input_cost=False,
-                 input_cost=False, verbose=True):
+                 von_mises_parameter=None, exponential_parameter=None, step_with_model=False,
+                 exo_cost=None, continuous_attention=False, verbose=True):
         """
         Parameters --
         A, B, init_endogenous, von_mises_parameter, exponential_parameter: parameters for the simulated microworld
         subgoal_dimensions: the number of dimensions the subgoal should have
-        nr_subgoals: the number of subgoals to compute
         init_exogenous: the initial states of the exogenous variables
         T: total amount of time for the agent to run
         final_goal: the final goal of the agent
         lr: not sure about this yet
         cost: not sure
         step_with_model: whether to use the noise model on each step
-        decision: not sure yet, fits into sparsemax model
         verbose: whether to print things out
         """
         # location and scale of the final goal

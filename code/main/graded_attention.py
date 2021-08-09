@@ -68,6 +68,7 @@ def analytic_attention(microworld, goal_scale, goal_state, attention_cost, step_
     s = microworld.endogenous_state
 
     # first compute the amount of attention to pay to each relationship
+    # compute d^2C/da^2
     uaa = compute_uaa(A, B, goal_scale, s, goal_state)
     A_attention = torch.zeros(A.shape)
     for i in range(A.shape[0]):
@@ -80,11 +81,14 @@ def analytic_attention(microworld, goal_scale, goal_state, attention_cost, step_
                 A_attention[loc] = 1
                 continue
 
+            # compute dC/dx
             ax = compute_uax(A, B, goal_scale, s, goal_state, False, loc)
+            # combine the derivatives to get the cost of inattention
             cost_of_inattention = (A[loc] * ax.dot(uaa.inverse().mv(ax))).abs()
             if cost_of_inattention < 1e-20:
                 attention = 0
             else:
+                # compute the amount of attention to pay
                 attention = max(1 - attention_cost / cost_of_inattention, 0)
             A_attention[loc] = attention
 
@@ -99,8 +103,11 @@ def analytic_attention(microworld, goal_scale, goal_state, attention_cost, step_
                 B_attention[loc] = 1
                 continue
 
+            # compute dC/dx
             ax = compute_uax(A, B, goal_scale, s, goal_state, True, loc)
+            # combine the derivatives to get the cost of inattention
             cost_of_inattention = (B[loc] * ax.dot(uaa.inverse().mv(ax))).abs()
+            # compute the amount of attention to pay
             if cost_of_inattention < 1e-20:
                 attention = 0
             else:
@@ -111,12 +118,13 @@ def analytic_attention(microworld, goal_scale, goal_state, attention_cost, step_
     for i in range(A.shape[0]):
         A_attention[i, i] = 1
 
-    # create reduced simulated micro-worlds based on the attention values
+    # create a reduced simulated micro-world based on the attention values
     A_reduced = A_attention * A
     B_reduced = B_attention * B
 
-    # compute the total amount of relationships not being attended to
+    # compute the total amount of relationship being ignored
     total_ignorance = len(torch.nonzero(A)) + len(torch.nonzero(B)) - A_attention.sum() - B_attention.sum()
+    total_attention = A_attention.sum() + B_attention.sum() - 5
     current_goal_dist = distance(s, goal_state, goal_scale)
 
     # create a new micro-world with the attention-reduced matrices
@@ -137,10 +145,10 @@ def analytic_attention(microworld, goal_scale, goal_state, attention_cost, step_
 
     exogenous = step_size * opt_step_size * gradient
 
-    reduced_microworld.step(exogenous)
+    microworld.step(exogenous)
 
-    loss = distance(reduced_microworld.endogenous_state, goal_state, goal_scale)**2 \
-        + attention_cost * (torch.sum(A_reduced) - A.shape[0] + torch.sum(B_reduced)) + \
-        exo_cost * exogenous.dot(exogenous)
+    loss = torch.sqrt(distance(microworld.endogenous_state, goal_state, goal_scale)**2 +
+                      exo_cost * exogenous.dot(exogenous)) + attention_cost * total_attention
+    microworld.endogenous_state = s
 
     return (exogenous, loss, total_ignorance)
