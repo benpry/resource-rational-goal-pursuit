@@ -1,2 +1,2 @@
-,attention_cost,exp_param,step_size,vm_param,pp_id,ll,AIC,agent_type
-0,0.0,0.05974790268066345,0.006008816871820644,2.062616734490198,5f35d5ee93a88f0023c8d5fe,-85.910495,177.82099,hill_climbing
+,exp_param,step_size,vm_param,pp_id,ll,AIC,agent_type
+0,0.055653016453421335,0.14241320860414872,2.0057604663072914,5f35d5ee93a88f0023c8d5fe,-86.037161,178.074322,hill_climbing
