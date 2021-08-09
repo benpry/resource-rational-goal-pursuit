@@ -23,7 +23,7 @@ T = 10
 exo_cost = 0.01
 continuous_attention = True
 goal = torch.tensor([[0., 0., 0., 0., 0.], [1, 1, 1, 1, 1]], dtype=torch.float64)
-NUM_ITER = 10
+NUM_ITER = 50
 exp_range = (0.001, 1.)
 vm_range = (0., 10.)
 step_size_range = (0., 1.5)
