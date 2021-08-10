@@ -42,7 +42,7 @@ def generate_sparsemax_data(continuous_attention, goal, init_endogenous, attenti
     # set up the sparsemax agent
     macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous, subgoal_dimensions=[0, 1, 2, 3, 4],
                                        init_exogenous=torch.tensor([0, 0, 0, 0]), T=T,
-                                       final_goal=goal, lr=step_size,
+                                       final_goal=goal, step_size=step_size,
                                        cost=attention_cost, von_mises_parameter=vm_param,
                                        exponential_parameter=exp_param, continuous_attention=continuous_attention,
                                        exo_cost=exo_cost, step_with_model=True, verbose=False)
@@ -111,7 +111,7 @@ def compute_sparsemax_log_likelihood(states, continuous_attention, goal, init_en
                 macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=endogenous,
                                                    subgoal_dimensions=[0, 1, 2, 3, 4],
                                                    init_exogenous=torch.tensor([0, 0, 0, 0]), T=T,
-                                                   final_goal=goal, cost=ac, lr=ss,  von_mises_parameter=vm,
+                                                   final_goal=goal, cost=ac, step_size=ss,  von_mises_parameter=vm,
                                                    exponential_parameter=exp,
                                                    continuous_attention=continuous_attention, exo_cost=exo_cost,
                                                    step_with_model=False, verbose=False)
@@ -244,10 +244,10 @@ def compute_sparsemax_score(continuous_attention, goal, init_endogenous, attenti
     macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous,
                                        subgoal_dimensions=[0, 1, 2, 3, 4],
                                        init_exogenous=torch.tensor([0, 0, 0, 0]), T=T,
-                                       final_goal=goal, cost=attention_cost, lr=step_size, von_mises_parameter=vm_param,
-                                       exponential_parameter=exp_param, continuous_attention=continuous_attention,
-                                       exo_cost=exo_cost, step_with_model=add_noise,
-                                       verbose=False)
+                                       final_goal=goal, cost=attention_cost, step_size=step_size,
+                                       von_mises_parameter=vm_param, exponential_parameter=exp_param,
+                                       continuous_attention=continuous_attention, exo_cost=exo_cost,
+                                       step_with_model=add_noise, verbose=False)
 
     # keep taking steps until reaching the final state
     for i in range(10):

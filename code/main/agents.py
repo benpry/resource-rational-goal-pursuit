@@ -9,8 +9,8 @@ from graded_attention import analytic_attention
 
 
 class HillClimbingAgent:
-    """ An agent class that can work towards a goal in a simulated microworld. Uses the sparse-max hill-climbing
-     model
+    """ An agent class that can work towards a goal in a simulated microworld. This class contains implementations
+    of the hill-climbing and sparse hill-climbing agents with both continuous and discrete attention.
     """
 
     def __init__(self, A=None, B=None, goal_loc=None, goal_scale=None, initial_dist=None,
@@ -23,7 +23,7 @@ class HillClimbingAgent:
         initial_dist: the initial distance from the goal
         subgoal_dimensions: the dimensions to pay attention to on the current subgoal (for compatibility with future work)
         att_cost: cost of attention for testing attention vectors
-        init_exogenous: initial exogenous state
+        init_exogenous: initial exogenous input (generally all 0s)
         step_size: the multiple of the optimal step size to use
         continuous_attention: whether attention should be continuous or discrete
         exo_cost: the 'c' value determining the weight of exogenous costs
@@ -37,6 +37,7 @@ class HillClimbingAgent:
         self.goal_loc = goal_loc
         self.goal_scale = goal_scale
         self.subgoal_dimensions = subgoal_dimensions
+        # make sure init_exogenous is a tensor
         if type(init_exogenous) == torch.Tensor:
             self.exogenous = init_exogenous
         else:
@@ -70,10 +71,10 @@ class HillClimbingAgent:
         subgoal_dimensions: list[int] - a list of indices of the variables to pay attention to
         """
 
-        # set up the microworld with matrices
+        # set up the transition matrices for the microworld
         A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
                           [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]])
-        B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.],
+        B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.],
                           [0., 10., 0., 0.]])
 
         # cut out rows and columns of matrices that aren't part of the subgoal being pursued
@@ -102,7 +103,7 @@ class HillClimbingAgent:
         """
         Create a representation of a microworld with the specified attention vector
         endogenous: the initial endogenous state
-        attention_vector:
+        attention_vector: a list specifying which edges to ignore
         """
         # create copies of A and B so as not to modify them permanently
         A = self.A.clone().detach()
@@ -154,10 +155,11 @@ class HillClimbingAgent:
                                                                               self.goal_loc, self.att_cost,
                                                                               self.step_size,
                                                                               exo_cost=self.exo_cost)
+            # set the exogenous variable
+            self.exogenous = best_exogenous
             # save performance statistics
             self.nr_of_edges_ignored.append(total_ignorance)
             self.nr_of_edges_attended.append(len(torch.nonzero(A)) + len(torch.nonzero(B)) - A.shape[0] - total_ignorance)
-            self.exogenous = best_exogenous
             self.exogenous_cost = self.exo_cost * self.exogenous.dot(self.exogenous)
             self.all_exogenous.append(self.exogenous)
         else:  # discrete attention version
@@ -171,7 +173,7 @@ class HillClimbingAgent:
             best_attention_vector = []
             for i, attention_vector_size in enumerate(range(num_edges + 1)):
                 if attention_vector_size == 0:
-                    # try the attention vector that attends to everything
+                    # try the empty attention vector, which attends to everything
                     best_exogenous, performance = self.test_attention_vector([], microworld)
                 else:
                     # get the best attention vector with size k, along with its performance and edges
@@ -182,7 +184,7 @@ class HillClimbingAgent:
                 best_all_sizes_performance.append(performance)
                 best_exogenous_all_sizes.append(best_exogenous)
 
-            # choose the best-performing attention vector
+            # choose the best-performing attention vector among the bests of each size
             choice = np.nanargmax(best_all_sizes_performance)
             self.nr_of_edges_ignored.append(len(best_all_sizes[choice]))
             self.nr_of_edges_attended.append(num_edges - len(best_all_sizes[choice]))
@@ -231,13 +233,13 @@ class HillClimbingAgent:
         if new_edge:
             best_attention_vector.append(new_edge)
         test_attention_vector = best_attention_vector[:]  # deep copy
-        # save the current endogenous state (to be reset later)
+        # save the current endogenous state (to reset it later)
         endogenous = microworld.endogenous_state
 
-        # focus on only the parts of the microworld specified by the test attention vector
+        # ignore the parts of the microworld specified by the test attention vector
         microworld_attention = self.create_attention_mv(endogenous, test_attention_vector)
 
-        # take a step in the reduced microworld (to account for endogenous connections)
+        # take a step in the reduced microworld with a zero input (to account for endogenous connections)
         microworld_attention.step(torch.zeros(4, dtype=torch.float64))
 
         # get distance from current goal
@@ -260,24 +262,20 @@ class HillClimbingAgent:
 
         exogenous = self.step_size * opt_step_size * gradient
 
-        # take one step with the optimal exogenous variables
+        # take one step in the real microworld with the exogenous action and compute the distance to the goal
         microworld.step(exogenous)
-
-        # check the distance from the goal
         goal_dist = self.distance(microworld.endogenous_state, self.goal_loc, self.goal_scale)
 
         # reset the microworld's endogenous state (undoing the last step)
         microworld.endogenous_state = endogenous
 
-        # compute number of non-zero connections and connections between endogenous variables
+        # compute number of edges the agent attends to
         non_zero_connections = microworld_attention.A.flatten() != 0.
         self_connections = microworld_attention.A.flatten() != 1.
-
-        # get the number of edges that the agent attends to
         cost_edges = float(torch.sum(non_zero_connections * self_connections) +
                            torch.sum(microworld_attention.B.flatten() != 0.))
 
-        # compute performance (delta in distance to final goal)
+        # compute performance (change in cost from the initial state, minus an attention cost)
         performance = self.initial_dist - torch.sqrt(goal_dist**2 + self.exo_cost * exogenous.dot(exogenous))\
             - self.att_cost * cost_edges
 

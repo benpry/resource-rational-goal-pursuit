@@ -13,7 +13,7 @@ class OptimalAgent:
     A: endogenous transition matrix
     B: exogenous input matrix
     endogenous: the current endogenous state of the system
-    Q: the cost of the endogenous state
+    Q: the cost matrix for each endogenous state
     Qf: the cost of the final endogenous state
     R: the cost of the exogenous inputs
     """
@@ -24,7 +24,6 @@ class OptimalAgent:
     Qf: torch.Tensor
     R: torch.Tensor
     T: int
-    opt_u: list
 
     def __init__(self, A, B, Q, Qf, R, T, init_endogenous):
         """
@@ -32,8 +31,8 @@ class OptimalAgent:
 
         A: endogenous transition matrix
         B: exogenous input matrix
-        endogenous: the current endogenous state of the system
-        Q: the cost of the endogenous state
+        init_endogenous: the starting endogenous state for the system
+        Q: the cost matrix for each endogenous state
         Qf: the cost of the final endogenous state
         R: the cost of the exogenous inputs
         """
@@ -49,7 +48,7 @@ class OptimalAgent:
         """
         Compute the optimal sequence of actions by backward induction via dynamic programming
 
-        This uses the DP algorithm from slide 23 of these slides:
+        This uses the dynamic programming algorithm from slide 23 of these slides:
         https://stanford.edu/class/ee363/lectures/dlqr.pdf
         """
         # n is the number of timesteps the agent has
@@ -78,7 +77,6 @@ class OptimalAgent:
         for t in range(n):
             u.append(torch.mv(K[t], curr_x))
             curr_x = torch.mv(self.A, curr_x) + torch.mv(self.B, u[-1])
-            # prints the timestep, action, and resulting state after each action
 
         # returns the optimal sequence of actions
         return u
@@ -103,7 +101,6 @@ class SparseLQRAgent:
     Qf: torch.Tensor
     R: torch.Tensor
     T: int
-    opt_u: list
 
     def __init__(self, A, B, Q, Qf, R, T, init_endogenous, attention_cost):
         """
@@ -111,8 +108,8 @@ class SparseLQRAgent:
 
         A: endogenous transition matrix
         B: exogenous input matrix
-        endogenous: the current endogenous state of the system
-        Q: the cost of the endogenous state
+        init_endogenous: the starting endogenous state for the system
+        Q: the cost matrix for each endogenous state
         Qf: the cost of the final endogenous state
         R: the cost of the exogenous inputs
         """
@@ -131,14 +128,14 @@ class SparseLQRAgent:
         :return:
         :rtype:
         """
-        # come up with links between reduced endogenous states
+        # come up with links between endogenous variables
         possible_links_a, possible_links_b = [], []
         for i in range(len(self.A)):
             for j in range(len(self.A)):
                 if self.A[i, j] != 0. and i != j:
                     possible_links_a.append(['var_source', i, j])
 
-        # come us with links between exogenous ande endogenous variables
+        # come up with links between exogenous and endogenous variables
         for i in range(len(self.B)):
             for j in range(4):
                 if self.B[i, j] != 0.:
@@ -146,7 +143,7 @@ class SparseLQRAgent:
 
         all_comb = possible_links_a + possible_links_b
 
-        return all_comb, possible_links_a
+        return all_comb
 
     def create_attention_mv(self, attention_vector):
         """
@@ -157,6 +154,8 @@ class SparseLQRAgent:
         """
         A = self.A.clone().detach()
         B = self.B.clone().detach()
+
+        # set the variables specified by the attention vector to zero
         for i in attention_vector:
             if i[0] == 'var_source':
                 A[i[1], i[2]] = 0.
@@ -206,7 +205,6 @@ class SparseLQRAgent:
         for t in range(n):
             u.append(torch.mv(K[t], curr_x))
             curr_x = torch.mv(A, curr_x) + torch.mv(B, u[-1])
-            # prints the timestep, action, and resulting state after each action
 
         # returns the optimal sequence of actions
         return u
@@ -265,8 +263,7 @@ class SparseLQRAgent:
         Find the best attention vector of size k. I.e. if you can only pay attention to k relationships, which
         should they be?
 
-        iteration: the "k", i.e. the number of edges to attend to
-        best_attention_vector
+        best_attention_vector: the best of the previously-computed attention vectors
         list_of_edges: a list of all the edges that could be attended to
         microworld: the microworld in which the agent operates
         """
@@ -284,19 +281,18 @@ class SparseLQRAgent:
         # get the best edge, performance, and attention vector
         best_edge = np.nanargmin(performance_all_new_edges)
         best_edge_performance = np.nanmin(performance_all_new_edges)
+        # add the best-performing edge to the attention vector and remove it from the list of edges
         best_attention_vector.append(list_of_edges[best_edge])
         list_of_edges.pop(best_edge)
+        # select the exogenous actions corresponding to the best edge
         best_exogenous = all_exogenous[best_edge]
         return best_attention_vector, best_edge_performance, list_of_edges, best_exogenous
 
     def choose_opt_attention_vector(self):
         """
         get the best attention vector in the microworld
-
-        :return:
-        :rtype:
         """
-        list_of_edges, possible_links_a = self.create_edges()
+        list_of_edges = self.create_edges()
 
         best_all_sizes, best_all_sizes_performance, best_exogenous_all_sizes = [], [], []
         best_attention_vector = []
@@ -312,7 +308,8 @@ class SparseLQRAgent:
                 # get the best attention vector with size i, along with its performance, edges, etc.
                 best_attention_vector, performance, list_of_edges, best_exogenous = \
                     self.find_best_attention_vector_of_size_k(best_attention_vector, list_of_edges, microworld)
-                # deepcopy
+
+            # deepcopy
             best_all_sizes.append(best_attention_vector[:])
             best_all_sizes_performance.append(performance)
             best_exogenous_all_sizes.append(best_exogenous)
@@ -325,9 +322,6 @@ class SparseLQRAgent:
     def get_actions(self):
         """
         compute the optimial action sequence
-
-        :return:
-        :rtype:
         """
         best_attention_vector, best_action_sequence = self.choose_opt_attention_vector()
 

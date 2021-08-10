@@ -91,7 +91,7 @@ if __name__ == "__main__":
                     macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=situation,
                                                        subgoal_dimensions=[0, 1, 2, 3, 4],
                                                        init_exogenous=init_exogenous, T=T, final_goal=goal,
-                                                       cost=attention_cost, lr=step_size,
+                                                       cost=attention_cost, step_size=step_size,
                                                        von_mises_parameter=vm_param,
                                                        exponential_parameter=exp_param,
                                                        continuous_attention=continuous_attention, exo_cost=exo_cost,

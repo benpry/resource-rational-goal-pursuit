@@ -130,11 +130,10 @@ def run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost
         except IndexError:
             break
         # define a goal pursuit agent
-        agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous,
-                                     subgoal_dimensions=subgoal_dimensions, lr=step_size,
+        agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous, subgoal_dimensions=subgoal_dimensions,
                                      init_exogenous=init_exogenous, T=n_rounds - t, final_goal=final_goal,
-                                     cost=attention_cost, exponential_parameter=exp_param,
-                                     von_mises_parameter=vm_param, step_with_model=False, exo_cost=exo_cost,
+                                     step_size=step_size, cost=attention_cost, von_mises_parameter=vm_param,
+                                     exponential_parameter=exp_param, step_with_model=False, exo_cost=exo_cost,
                                      continuous_attention=continuous_attention, verbose=False)
 
         # take a step with the agent

@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 from ast import literal_eval
 from bayes_opt import BayesianOptimization
+
+# import from other files
 sys.path.append("../main")
 from linear_quadratic_regulator import OptimalAgent, SparseLQRAgent
 from Microworld_experiment import Microworld
@@ -51,7 +53,7 @@ def generate_sparsemax_data(continuous_attention, goal, init_endogenous, attenti
     # set up a sparse max agent
     macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous, subgoal_dimensions=[0, 1, 2, 3, 4],
                                        init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64), T=T,
-                                       final_goal=goal, lr=step_size, cost=attention_cost,
+                                       final_goal=goal, step_size=step_size, cost=attention_cost,
                                        von_mises_parameter=vm_param, exponential_parameter=exp_param,
                                        continuous_attention=continuous_attention, exo_cost=exo_cost,
                                        step_with_model=add_noise, verbose=False)
@@ -70,11 +72,10 @@ def generate_sparse_lqr_data(init_endogenous, attention_cost, exp_param=exp_para
     """
     agent_states = []
 
-    state = init_endogenous
+    mw = Microworld(A, B, init_endogenous, von_mises_parameter=vm_param, exponential_parameter=exp_param)
     for i in range(10):
         # set up the microworld and agent
-        mw = Microworld(A, B, state, von_mises_parameter=vm_param, exponential_parameter=exp_param)
-        agent = SparseLQRAgent(A, B, Q, Qf, R, T - i, state, attention_cost * (T - i) / T)
+        agent = SparseLQRAgent(A, B, Q, Qf, R, T - i, mw.endogenous_state, attention_cost * (T - i) / T)
         # take a step
         actions = agent.get_actions()
         if add_noise:
@@ -82,8 +83,7 @@ def generate_sparse_lqr_data(init_endogenous, attention_cost, exp_param=exp_para
         else:
             mw.step(actions[0])
         # save the state
-        state = mw.endogenous_state
-        agent_states.append(state)
+        agent_states.append(mw.endogenous_state)
 
     return agent_states
 
@@ -105,7 +105,7 @@ def compute_sparsemax_log_likelihood(states, continuous_attention, goal, init_en
             macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=endogenous,
                                                subgoal_dimensions=[0, 1, 2, 3, 4],
                                                init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64),
-                                               T=T-t, final_goal=goal, cost=ac, lr=ss,  von_mises_parameter=vm,
+                                               T=T-t, final_goal=goal, cost=ac, step_size=ss,  von_mises_parameter=vm,
                                                exponential_parameter=exp, continuous_attention=continuous_attention,
                                                exo_cost=exo_cost, step_with_model=False, verbose=False)
 
@@ -138,7 +138,6 @@ def compute_nm1_log_likelihood(states, init_endogenous):
     Compute the log-likelihood of the given states under null model 2
     """
     def cost_function(exp, vm, n, b):
-
         # round the n parameter
         n = int(np.round(n))
         log_likelihoods = []
@@ -324,7 +323,7 @@ def compute_hill_climbing_log_likelihood(states, goal, init_endogenous):
             # set up the hill-climbing agent
             macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=endogenous, subgoal_dimensions=[0, 1, 2, 3, 4],
                                                init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64), T=T,
-                                               final_goal=goal, cost=0, lr=ss, von_mises_parameter=vm,
+                                               final_goal=goal, cost=0, step_size=ss, von_mises_parameter=vm,
                                                exponential_parameter=exp, continuous_attention=True, exo_cost=exo_cost,
                                                step_with_model=False, verbose=False)
             # take a step and save the state

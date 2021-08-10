@@ -11,19 +11,17 @@ class MicroworldMacroAgent:
     An agent in the simulated microworld.
     This class acts as a wrapper for other agent classes.
     """
-    def __init__(self, A=None, B=None, init_endogenous=None, subgoal_dimensions=None,
-                 init_exogenous=None, T=None, final_goal=None, lr=None, cost=None,
-                 von_mises_parameter=None, exponential_parameter=None, step_with_model=False,
-                 exo_cost=None, continuous_attention=False, verbose=True):
+    def __init__(self, A=None, B=None, init_endogenous=None, subgoal_dimensions=None, init_exogenous=None, T=None,
+                 final_goal=None, step_size=None, cost=None, von_mises_parameter=None, exponential_parameter=None,
+                 step_with_model=False, exo_cost=None, continuous_attention=False, verbose=True):
         """
         Parameters --
         A, B, init_endogenous, von_mises_parameter, exponential_parameter: parameters for the simulated microworld
-        subgoal_dimensions: the number of dimensions the subgoal should have
+        subgoal_dimensions: the dimensions that the agent should consider for the first subgoal
         init_exogenous: the initial states of the exogenous variables
         T: total amount of time for the agent to run
-        final_goal: the final goal of the agent
-        lr: not sure about this yet
-        cost: not sure
+        step_size: the size of steps that the agent takes
+        cost: the cost of attention for the agent
         step_with_model: whether to use the noise model on each step
         verbose: whether to print things out
         """
@@ -52,7 +50,7 @@ class MicroworldMacroAgent:
         # set up a hill-climbing agent
         self.agent = HillClimbingAgent(A=A, B=B, goal_loc=self.final_goal_loc, goal_scale=self.final_goal_scale,
                                        initial_dist=self.initial_dist, subgoal_dimensions=subgoal_dimensions,
-                                       init_exogenous=init_exogenous, step_size=lr,
+                                       init_exogenous=init_exogenous, step_size=step_size,
                                        continuous_attention=continuous_attention, att_cost=cost,
                                        exo_cost=exo_cost)
 
@@ -65,8 +63,8 @@ class MicroworldMacroAgent:
 
     def step(self, stop_t=None):
         """
-        Do one step with this agent, selecting an action and updating the state of the microworld. Always takes at least
-        one step, otherwise keeps taking steps until stop_t is reached.
+        Take (a) step(s) with this agent, selecting an action and updating the state of the microworld. Always takes at
+        least one step, otherwise keeps taking steps until stop_t is reached.
         """
         # previous state
         s_prev = self.env.endogenous_state
@@ -75,12 +73,6 @@ class MicroworldMacroAgent:
         done = False
         # keep looping until either reaching an intermediate goal or running out of time
         while not done:
-            # check if out of time
-            if self.agent.t >= self.T:
-                done = True
-            else:
-                done = False
-
             # increment time by 1
             self.agent.t += 1
 
@@ -121,23 +113,20 @@ class MicroworldMacroAgent:
             if self.verbose:
                 print('Choosen exogenous action -------------------------------------------',
                       self.agent.exogenous.tolist())
-
-            if self.verbose:
                 print('Endogenous state ---------------------------------------', self.env.endogenous_state.tolist())
-
-            if self.verbose:
                 print('Goal -----------------------------------', self.agent.goal_loc.tolist())
 
-            # append current step's information to traces
+            # append current step's information to the lists keeping track of it
             self.all_endogenous.append(self.env.endogenous_state.tolist())
             self.final_goal_dist_all.append(float(final_goal_dist))
             self.final_goal_reached_all.append(final_goal_indicator)
             self.closeness_all.append(self.initial_dist - final_goal_dist.detach())
 
-            # if it is currently the stopping time specified in the parameter, break
+            # if it is currently the stopping time specified in the parameter, we are done
             if stop_t <= self.agent.t:
-                break
+                done = True
 
+        # get the final state from the microworld
         s_next = self.env.endogenous_state
 
         return s_prev, s_next, done
