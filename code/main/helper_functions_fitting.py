@@ -10,6 +10,8 @@ from mpmath import *
 from scipy.special import i0
 from linear_quadratic_regulator import OptimalAgent, SparseLQRAgent
 
+true_B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [-0.2, 0., 0.7, 2.],
+                       [0., 10., 0., 0.]], dtype=torch.float64)
 
 def log_likelihood_von_mises(angles_data, k):
     """
@@ -97,7 +99,7 @@ def run_lqr_once(A, B, situation, human_data, exo_cost, exp_param, vm_param, n_r
         agent_action = lqr_agent.get_actions()[0]
 
         # define the microworld and take a step in it
-        env = Microworld(A, B, init_endogenous)
+        env = Microworld(A, true_B, init_endogenous)
         env.step(agent_action)
         s_next = env.endogenous_state
 
@@ -275,7 +277,7 @@ def null_model(n, b, endogenous, goal_loc):
     Implementtation of null model 1, which randomly selects the endogenous variables to pay attention to, then sets the
     exogenous variables to random amounts in the direction of interest
     """
-    # the exogenous-to-endogenous transition matrix
+    # the (perceived) exogenous-to-endogenous transition matrix
     B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]])
 
     # choose n endogenous variables to target
@@ -348,7 +350,7 @@ def make_individual_cost_function_null_1(human_data=None, pp_id=None, goals=None
                     break
 
                 # set up the microworld and get an input from the agent
-                env = Microworld(A=A, B=B, init=init_endogenous)
+                env = Microworld(A=A, B=true_B, init=init_endogenous)
                 agent_input = torch.tensor(null_model(n, b, init_endogenous, final_goal[0]), dtype=torch.float64)
 
                 # take a step and store the next states
@@ -399,7 +401,7 @@ def make_individual_cost_function_null_2(human_data=None, pp_id=None, goals=None
                 break
 
             # set up the environment and take a step in it
-            env = Microworld(A=A, B=B, init=init_endogenous)
+            env = Microworld(A=A, B=true_B, init=init_endogenous)
             agent_input = torch.zeros(B.shape[1], dtype=torch.float64)
             env.step(agent_input.unsqueeze(0))
 

@@ -41,7 +41,10 @@ class MicroworldMacroAgent:
         self.verbose = verbose
 
         # create a microworld environment
-        self.env = Microworld(A=A, B=B, init=init_endogenous, von_mises_parameter=von_mises_parameter,
+        # the actual transition matrix (not the one that people perceived)
+        true_B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [-0.2, 0., 0.7, 2.], [0., 10., 0., 0.]],
+                              dtype=torch.float64)
+        self.env = Microworld(A=A, B=true_B, init=init_endogenous, von_mises_parameter=von_mises_parameter,
                               exponential_parameter=exponential_parameter)
 
         # compute the distance between the initial state and the goal location

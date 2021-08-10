@@ -34,7 +34,7 @@ def do_bayesian_optimization(agent_type, data, pp_id, goals):
         cost_function = make_individual_cost_function_null_1(human_data=data, pp_id=pp_id, goals=goals)
         pbounds = {'n': (1., 5.), 'b': (0., 50.), 'exp_param': exp_range, 'vm_param': vm_range}
         n_params = 4
-        probe_points = [{'n': 1, 'b': 0, 'exp_param': 0.03, 'vm_param': 2.}]
+        probe_points = [{'n': 1., 'b': 0., 'exp_param': 0.03, 'vm_param': 2.}]
 
     elif agent_type == 'null_model_2':
         cost_function = make_individual_cost_function_null_2(human_data=data, pp_id=pp_id, goals=goals)
@@ -53,28 +53,27 @@ def do_bayesian_optimization(agent_type, data, pp_id, goals):
 
     elif agent_type == 'sparse_max_continuous':
         cost_function = make_individual_cost_function(human_data=completed_data, pp_id=pp_id, goals=goals,
-                                                      agent_type=agent_type, continuous_attention=True,
+                                                      continuous_attention=True, agent_type=agent_type,
                                                       exo_cost=exo_cost)
         pbounds = {'attention_cost': (0., 30.), 'exp_param': exp_range,
                    'step_size': step_size_range, 'vm_param': vm_range}
         n_params = 4
-        probe_points = [{'attention_cost': 30., 'exp_param': 0.03, 'step_size': 0, 'vm_param': 2.}]
+        probe_points = [{'attention_cost': 30., 'step_size': 0., 'exp_param': 0.03, 'vm_param': 2.}]
 
     elif agent_type == 'hill_climbing':
         cost_function = make_individual_cost_function(human_data=completed_data, pp_id=pp_id, goals=goals,
-                                                      agent_type=agent_type, continuous_attention=True,
+                                                      continuous_attention=True, agent_type=agent_type,
                                                       exo_cost=exo_cost)
-        pbounds = {'exp_param': exp_range, 'step_size': step_size_range,
-                   'vm_param': vm_range}
+        pbounds = {'step_size': step_size_range, 'exp_param': exp_range, 'vm_param': vm_range}
         n_params = 3
-        probe_points = [{'exp_param': 0.03, 'step_size': 0, 'vm_param': 2.}]
+        probe_points = [{'step_size': 0., 'exp_param': 0.03, 'vm_param': 2.}]
 
     elif agent_type == 'sparse_lqr':
         # Sparse LQR Model
         cost_function = make_individual_cost_function(human_data=completed_data, pp_id=pp_id, goals=goals,
                                                       agent_type=agent_type, exo_cost=exo_cost)
         pbounds = {'exp_param': exp_range, 'vm_param': vm_range, 'attention_cost': (0., 300.)}
-        probe_points = [{'exp_param': 0.03, 'vm_param': 2., 'attention_cost': 300.}]
+        probe_points = [{'attention_cost': 300., 'exp_param': 0.03, 'vm_param': 2.}]
         n_params = 3
 
     else:
@@ -91,14 +90,12 @@ def do_bayesian_optimization(agent_type, data, pp_id, goals):
         pbounds=pbounds,
         random_state=1,
     )
-
     # add the test point(s) to probe
     for point in probe_points:
         optimizer.probe(
             params=point,
             lazy=True
         )
-
     # maximize the log-likelihood with Bayesian optimization
     optimizer.maximize(
         init_points=opt_iter,
