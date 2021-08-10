@@ -45,6 +45,8 @@ def generate_sparsemax_data(continuous_attention, goal, init_endogenous, attenti
     generate the data using the sparsemax model, assuming it is correct
     """
     agent_states = []
+    if np.isnan(attention_cost):
+        attention_cost = 0
 
     # set up a sparse max agent
     macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous, subgoal_dimensions=[0, 1, 2, 3, 4],
