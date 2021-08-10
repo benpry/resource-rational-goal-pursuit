@@ -71,7 +71,7 @@ class HillClimbingAgent:
         subgoal_dimensions: list[int] - a list of indices of the variables to pay attention to
         """
 
-        # set up the transition matrices for the microworld
+        # set up the transition matrices for the (perceived) microworld
         A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
                           [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]])
         B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.],

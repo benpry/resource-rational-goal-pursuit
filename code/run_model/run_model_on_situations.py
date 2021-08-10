@@ -24,6 +24,9 @@ A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0.,
                   [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]], dtype=torch.float64)
 B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
                  dtype=torch.float64)
+true_B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [-0.2, 0., 0.7, 2.],
+                       [0., 10., 0., 0.]], dtype=torch.float64)
+
 init_exogenous = torch.tensor([0., 0., 0., 0.], dtype=torch.float64)
 T = 10
 
@@ -88,7 +91,7 @@ if __name__ == "__main__":
                 if agent_type in ("hill_climbing", "sparse_max_discrete", "sparse_max_continuous"):
                     continuous_attention = False if agent_type == 'sparse_max_discrete' else True
                     # initialize and run the agent
-                    macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=situation,
+                    macro_agent = MicroworldMacroAgent(A=A, B=B, true_B=true_B, init_endogenous=situation,
                                                        subgoal_dimensions=[0, 1, 2, 3, 4],
                                                        init_exogenous=init_exogenous, T=T, final_goal=goal,
                                                        cost=attention_cost, step_size=step_size,
@@ -102,17 +105,17 @@ if __name__ == "__main__":
 
                     # compute the cost and store the exogenous variables
                     all_exo = macro_agent.agent.all_exogenous
-                    s_final = macro_agent.env.endogenous_state
+                    s_final = macro_agent.true_env.endogenous_state
 
                 elif agent_type == 'sparse_lqr':
                     performance_samples = []
-                    microworld = Microworld(A=A, B=B, init=situation, exponential_parameter=exp_param,
+                    microworld = Microworld(A=A, B=true_B, init=situation, exponential_parameter=exp_param,
                                             von_mises_parameter=vm_param)
 
                     all_exo = []
                     for i in range(10):
                         sparse_lqr_agent = SparseLQRAgent(A, B, Q, Qf, R, T-i, microworld.endogenous_state,
-                                                          attention_cost=attention_cost*((T-i)/T))
+                                                          attention_cost=attention_cost * (T-i) / T)
                         opt_sequence = sparse_lqr_agent.get_actions()
                         microworld.step_with_model(opt_sequence[0], noise=noise)
                         all_exo.append(opt_sequence[0])
@@ -121,7 +124,7 @@ if __name__ == "__main__":
                     s_final = microworld.endogenous_state
 
                 elif agent_type == 'null_model_2':
-                    microworld = Microworld(A=A, B=B, init=situation, exponential_parameter=exp_param,
+                    microworld = Microworld(A=A, B=true_B, init=situation, exponential_parameter=exp_param,
                                             von_mises_parameter=vm_param)
 
                     # run null model 2 on the microworld
@@ -136,7 +139,7 @@ if __name__ == "__main__":
                     n = int(np.round(participant['n']))
                     b = float(participant['b'])
 
-                    microworld = Microworld(A=A, B=B, init=situation, exponential_parameter=exp_param,
+                    microworld = Microworld(A=A, B=true_B, init=situation, exponential_parameter=exp_param,
                                             von_mises_parameter=vm_param)
 
                     # run null model 1 on the microworld

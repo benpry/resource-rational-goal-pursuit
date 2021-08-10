@@ -20,6 +20,9 @@ A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0.,
                   [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]], dtype=torch.float64)
 B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
                  dtype=torch.float64)
+true_B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [-0.2, 0., 0.7, 2.],
+                       [0., 10., 0., 0.]], dtype=torch.float64)
+
 Q = torch.zeros((5, 5), dtype=torch.float64)
 Qf = torch.diag(torch.tensor([1., 1., 1., 1., 1.], dtype=torch.float64))
 R = torch.diag(torch.tensor([0.01, 0.01, 0.01, 0.01], dtype=torch.float64))
@@ -51,7 +54,8 @@ def generate_sparsemax_data(continuous_attention, goal, init_endogenous, attenti
         attention_cost = 0
 
     # set up a sparse max agent
-    macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=init_endogenous, subgoal_dimensions=[0, 1, 2, 3, 4],
+    macro_agent = MicroworldMacroAgent(A=A, B=B, true_B=true_B, init_endogenous=init_endogenous,
+                                       subgoal_dimensions=[0, 1, 2, 3, 4],
                                        init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64), T=T,
                                        final_goal=goal, step_size=step_size, cost=attention_cost,
                                        von_mises_parameter=vm_param, exponential_parameter=exp_param,
@@ -72,7 +76,7 @@ def generate_sparse_lqr_data(init_endogenous, attention_cost, exp_param=exp_para
     """
     agent_states = []
 
-    mw = Microworld(A, B, init_endogenous, von_mises_parameter=vm_param, exponential_parameter=exp_param)
+    mw = Microworld(A, true_B, init_endogenous, von_mises_parameter=vm_param, exponential_parameter=exp_param)
     for i in range(10):
         # set up the microworld and agent
         agent = SparseLQRAgent(A, B, Q, Qf, R, T - i, mw.endogenous_state, attention_cost * (T - i) / T)
@@ -102,7 +106,7 @@ def compute_sparsemax_log_likelihood(states, continuous_attention, goal, init_en
                 endogenous = states[t-1]
 
             # set up the agent
-            macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=endogenous,
+            macro_agent = MicroworldMacroAgent(A=A, B=B, true_B=true_B, init_endogenous=endogenous,
                                                subgoal_dimensions=[0, 1, 2, 3, 4],
                                                init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64),
                                                T=T-t, final_goal=goal, cost=ac, step_size=ss,  von_mises_parameter=vm,
@@ -151,12 +155,12 @@ def compute_nm1_log_likelihood(states, init_endogenous):
                     endogenous = states[t-1]
 
                 # set up the microworld
-                env = Microworld(A=A, B=B, init=endogenous)
+                env = Microworld(A=A, B=true_B, init=endogenous)
                 # take a step inthe microworld
-                agent_input = torch.tensor(null_model(n, b, endogenous, torch.tensor([0, 0, 0, 0, 0], dtype=torch.float64)),
-                                           dtype=torch.float64)
+                agent_input = torch.tensor(null_model(n, b, endogenous, goal[0]), dtype=torch.float64)
                 env.step(agent_input.unsqueeze(0))
                 agent_states.append(env.endogenous_state.numpy()[0])
+
             log_likelihoods.append(human_and_agent_states_to_log_likelihood(data_states, agent_states, exp, vm))
 
         return np.mean(log_likelihoods)
@@ -193,7 +197,7 @@ def compute_nm2_log_likelihood(states, init_endogenous):
                 endogenous = states[t-1]
 
             # set up the microworld
-            env = Microworld(A=A, B=B, init=endogenous)
+            env = Microworld(A=A, B=true_B, init=endogenous)
             # take a step in the microworld
             agent_input = torch.zeros(B.shape[1], dtype=torch.float64)
             env.step(agent_input.unsqueeze(0))
@@ -236,7 +240,7 @@ def compute_lqr_log_likelihood(states, init_endogenous):
             optimal_agent = OptimalAgent(A, B, Q, Qf, R, T - t, endogenous)
             action_sequence = optimal_agent.get_actions()
             # take a step in a microworld
-            env = Microworld(A=A, B=B, init=endogenous)
+            env = Microworld(A=A, B=true_B, init=endogenous)
             env.step(action_sequence[0])
             # save the next state
             next_state = env.endogenous_state
@@ -278,7 +282,7 @@ def compute_sparse_lqr_log_likelihood(states, init_endogenous):
                 endogenous = states[t - 1]
 
             # set up the microworld and agent
-            mw = Microworld(A, B, endogenous)
+            mw = Microworld(A, true_B, endogenous)
             agent = SparseLQRAgent(A, B, Q, Qf, R, T-t, endogenous, ac * (T-t) / T)
             # take an action in the microworld
             actions = agent.get_actions()
@@ -321,9 +325,10 @@ def compute_hill_climbing_log_likelihood(states, goal, init_endogenous):
                 endogenous = states[t - 1]
 
             # set up the hill-climbing agent
-            macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=endogenous, subgoal_dimensions=[0, 1, 2, 3, 4],
-                                               init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64), T=T,
-                                               final_goal=goal, cost=0, step_size=ss, von_mises_parameter=vm,
+            macro_agent = MicroworldMacroAgent(A=A, B=B, true_B=true_B, init_endogenous=endogenous,
+                                               subgoal_dimensions=[0, 1, 2, 3, 4],
+                                               init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64),
+                                               T=T-t, final_goal=goal, cost=0, step_size=ss, von_mises_parameter=vm,
                                                exponential_parameter=exp, continuous_attention=True, exo_cost=exo_cost,
                                                step_with_model=False, verbose=False)
             # take a step and save the state

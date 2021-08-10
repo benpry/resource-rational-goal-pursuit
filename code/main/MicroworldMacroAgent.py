@@ -11,9 +11,10 @@ class MicroworldMacroAgent:
     An agent in the simulated microworld.
     This class acts as a wrapper for other agent classes.
     """
-    def __init__(self, A=None, B=None, init_endogenous=None, subgoal_dimensions=None, init_exogenous=None, T=None,
-                 final_goal=None, step_size=None, cost=None, von_mises_parameter=None, exponential_parameter=None,
-                 step_with_model=False, exo_cost=None, continuous_attention=False, verbose=True):
+    def __init__(self, A=None, B=None, true_B=None, init_endogenous=None, subgoal_dimensions=None, init_exogenous=None,
+                 T=None, final_goal=None, step_size=None, cost=None, von_mises_parameter=None,
+                 exponential_parameter=None, step_with_model=False, exo_cost=None, continuous_attention=False,
+                 verbose=True):
         """
         Parameters --
         A, B, init_endogenous, von_mises_parameter, exponential_parameter: parameters for the simulated microworld
@@ -41,14 +42,14 @@ class MicroworldMacroAgent:
         self.verbose = verbose
 
         # create a microworld environment
-        # the actual transition matrix (not the one that people perceived)
-        true_B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [-0.2, 0., 0.7, 2.], [0., 10., 0., 0.]],
-                              dtype=torch.float64)
-        self.env = Microworld(A=A, B=true_B, init=init_endogenous, von_mises_parameter=von_mises_parameter,
-                              exponential_parameter=exponential_parameter)
+        self.perceived_env = Microworld(A=A, B=B, init=init_endogenous, von_mises_parameter=von_mises_parameter,
+                                        exponential_parameter=exponential_parameter)
+        self.true_env = Microworld(A=A, B=true_B, init=init_endogenous, von_mises_parameter=von_mises_parameter,
+                                   exponential_parameter=exponential_parameter)
 
         # compute the distance between the initial state and the goal location
-        self.initial_dist = self.distance(self.env.endogenous_state, self.final_goal_loc, self.final_goal_scale)
+        self.initial_dist = self.distance(self.perceived_env.endogenous_state, self.final_goal_loc,
+                                          self.final_goal_scale)
 
         # set up a hill-climbing agent
         self.agent = HillClimbingAgent(A=A, B=B, goal_loc=self.final_goal_loc, goal_scale=self.final_goal_scale,
@@ -70,7 +71,7 @@ class MicroworldMacroAgent:
         least one step, otherwise keeps taking steps until stop_t is reached.
         """
         # previous state
-        s_prev = self.env.endogenous_state
+        s_prev = self.true_env.endogenous_state
 
         # initialize the done indicator to false
         done = False
@@ -87,16 +88,16 @@ class MicroworldMacroAgent:
                 print('Timestep ---------------------------------------------------', self.agent.t)
 
             # get the agent's action
-            agent_exo = self.agent.select_sparsemax_action(self.env)
+            agent_exo = self.agent.select_sparsemax_action(self.perceived_env)
 
             # take a step in the microworld
             if self.step_with_model:
-                self.env.step_with_model(agent_exo)
+                self.true_env.step_with_model(agent_exo)
             else:
-                self.env.step(agent_exo)
+                self.true_env.step(agent_exo)
 
             # get distance between final goal and current state
-            final_goal_dist = self.distance(self.env.endogenous_state, self.final_goal_loc, self.final_goal_scale)
+            final_goal_dist = self.distance(self.true_env.endogenous_state, self.final_goal_loc, self.final_goal_scale)
 
             # we have achieved the final goal if we are within 30 of it (From an older version with binary achievement)
             if final_goal_dist <= 30:
@@ -116,11 +117,11 @@ class MicroworldMacroAgent:
             if self.verbose:
                 print('Choosen exogenous action -------------------------------------------',
                       self.agent.exogenous.tolist())
-                print('Endogenous state ---------------------------------------', self.env.endogenous_state.tolist())
+                print('Endogenous state ---------------------------------------', self.true_env.endogenous_state.tolist())
                 print('Goal -----------------------------------', self.agent.goal_loc.tolist())
 
             # append current step's information to the lists keeping track of it
-            self.all_endogenous.append(self.env.endogenous_state.tolist())
+            self.all_endogenous.append(self.true_env.endogenous_state.tolist())
             self.final_goal_dist_all.append(float(final_goal_dist))
             self.final_goal_reached_all.append(final_goal_indicator)
             self.closeness_all.append(self.initial_dist - final_goal_dist.detach())
@@ -130,6 +131,6 @@ class MicroworldMacroAgent:
                 done = True
 
         # get the final state from the microworld
-        s_next = self.env.endogenous_state
+        s_next = self.true_env.endogenous_state
 
         return s_prev, s_next, done
