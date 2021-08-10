@@ -16,7 +16,7 @@ from helper_functions_fitting import human_and_agent_states_to_log_likelihood, n
 # set up the general parameters of the environment
 A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
                   [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]], dtype=torch.float64)
-B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
+B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
                  dtype=torch.float64)
 Q = torch.zeros((5, 5), dtype=torch.float64)
 Qf = torch.diag(torch.tensor([1., 1., 1., 1., 1.], dtype=torch.float64))
@@ -24,16 +24,19 @@ R = torch.diag(torch.tensor([0.01, 0.01, 0.01, 0.01], dtype=torch.float64))
 T = 10
 exo_cost = 0.01
 goal = torch.tensor([[0., 0., 0., 0., 0.], [1, 1, 1, 1, 1]], dtype=torch.float64)
-OPT_ITERS = 200
 
+# exponential and von mises parameters
 exp_param_default = 0.1
 vm_param_default = 40
 exp_range = (0.001, 1.)
 vm_range = (0., 10.)
 step_size_range = (0., 1.5)
 
+# seed the random number generators
 np.random.seed(21)
 torch.manual_seed(22)
+
+OPT_ITERS = 200  # number of iterations of Bayesian optimization to do
 
 
 def generate_sparsemax_data(continuous_attention, goal, init_endogenous, attention_cost, step_size,
@@ -99,8 +102,8 @@ def compute_sparsemax_log_likelihood(states, continuous_attention, goal, init_en
             # set up the agent
             macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=endogenous,
                                                subgoal_dimensions=[0, 1, 2, 3, 4],
-                                               init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64), T=T,
-                                               final_goal=goal, cost=ac, lr=ss,  von_mises_parameter=vm,
+                                               init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64),
+                                               T=T-t, final_goal=goal, cost=ac, lr=ss,  von_mises_parameter=vm,
                                                exponential_parameter=exp, continuous_attention=continuous_attention,
                                                exo_cost=exo_cost, step_with_model=False, verbose=False)
 
@@ -135,7 +138,7 @@ def compute_nm1_log_likelihood(states, init_endogenous):
     def cost_function(exp, vm, n, b):
 
         # round the n parameter
-        n = int(round(n))
+        n = int(np.round(n))
         log_likelihoods = []
         data_states = [s.numpy() for s in states]
         for i in range(10):
@@ -196,8 +199,7 @@ def compute_nm2_log_likelihood(states, init_endogenous):
             agent_states.append(env.endogenous_state.numpy()[0])
 
         # return the log-likelihood
-        return human_and_agent_states_to_log_likelihood(data_states, agent_states, exp,
-                                                        vm)
+        return human_and_agent_states_to_log_likelihood(data_states, agent_states, exp, vm)
 
     pbounds = {'exp': exp_range, 'vm': vm_range}
     optimizer = BayesianOptimization(
@@ -221,6 +223,7 @@ def compute_lqr_log_likelihood(states, init_endogenous):
     Compute the log likelihood of the human states under the LQR
     """
     def cost_function(exp, vm):
+        data_states = [s.numpy() for s in states]
         agent_states = []
         for t in range(10):
             if t == 0:
@@ -238,7 +241,6 @@ def compute_lqr_log_likelihood(states, init_endogenous):
             next_state = env.endogenous_state
             agent_states.append(next_state.numpy())
 
-        data_states = [s.numpy() for s in states]
         return human_and_agent_states_to_log_likelihood(data_states, agent_states, exp, vm)
 
     pbounds = {'exp': exp_range, 'vm': vm_range}
@@ -285,7 +287,7 @@ def compute_sparse_lqr_log_likelihood(states, init_endogenous):
 
         return human_and_agent_states_to_log_likelihood(data_states, agent_states, exp, vm)
 
-    pbounds = {'ac': (0., 300.), 'exp': exp_range, 'vm': vm_range}
+    pbounds = {'ac': (0., 300.), 'exp': exp_range, 'vm': vm_range}  # higher attention cost to balance out more rounds
 
     optimizer = BayesianOptimization(
         f=cost_function,
@@ -318,8 +320,7 @@ def compute_hill_climbing_log_likelihood(states, goal, init_endogenous):
                 endogenous = states[t - 1]
 
             # set up the hill-climbing agent
-            macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=endogenous,
-                                               subgoal_dimensions=[0, 1, 2, 3, 4],
+            macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=endogenous, subgoal_dimensions=[0, 1, 2, 3, 4],
                                                init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64), T=T,
                                                final_goal=goal, cost=0, lr=ss, von_mises_parameter=vm,
                                                exponential_parameter=exp, continuous_attention=True, exo_cost=exo_cost,
@@ -357,6 +358,7 @@ OUTPUT_FILE = "../../data/model_recovery/recovery_results_{}.csv"
 
 if __name__ == '__main__':
 
+    # read the relevant row from the parameters file
     row_idx = int(sys.argv[1])
     df_params = pd.read_csv(FIT_PARAMS_FILE)
     row = df_params.loc[row_idx]
@@ -370,7 +372,6 @@ if __name__ == '__main__':
     situation = torch.tensor(literal_eval(df_conditions.loc[condition_num]["initial_endogenous"]), dtype=torch.float64)
 
     goal = torch.tensor([[0., 0., 0., 0., 0.], [1., 1., 1., 1., 1.]], dtype=torch.float64)
-
     agent_type = row["agent_type"]
 
     print(agent_type)
@@ -385,7 +386,7 @@ if __name__ == '__main__':
         step_size = row["step_size"]
         continuous_attention = False
         model_data = generate_sparsemax_data(continuous_attention, goal, situation, attention_cost, step_size)
-    elif agent_type == "sparse_lqr":  # agent_type == "sparse_lqr":
+    elif agent_type == "sparse_lqr":
         attention_cost = row["attention_cost"]
         model_data = generate_sparse_lqr_data(situation, attention_cost)
     else:

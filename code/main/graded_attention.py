@@ -3,7 +3,6 @@ This file implements continuous attention. The main function is "analytic_attent
 use continuous attention.
 """
 import torch
-from Microworld_experiment import Microworld
 
 def compute_uaa(A, B, S, s, g):
     """
@@ -39,6 +38,7 @@ def compute_uax(A, B, S, s, g, is_in_B, loc):
         denom = torch.sqrt((A.mv(s) - g).t().matmul(S.inverse()).dot(A.mv(s) - g))
         return num / denom
     else:
+        # dAs should be the product of dA (all zeros but a 1 in the location of x) and s, the current state
         dAs = torch.zeros(A.shape[0], dtype=torch.float64)
         dAs[loc[0]] = s[loc[1]]
 
@@ -70,18 +70,20 @@ def analytic_attention(microworld, goal_scale, goal_state, attention_cost, step_
     # first compute the amount of attention to pay to each relationship
     # compute d^2C/da^2
     uaa = compute_uaa(A, B, goal_scale, s, goal_state)
-    A_attention = torch.zeros(A.shape)
+    A_attention = torch.zeros(A.shape, dtype=torch.float64)
     for i in range(A.shape[0]):
         for j in range(A.shape[1]):
             loc = (i, j)
+            # don't pay attention to non-existent connections
             if A[loc] == 0:
                 A_attention[loc] = 0
                 continue
+            # pay full attention if attention is free
             elif attention_cost == 0:
                 A_attention[loc] = 1
                 continue
 
-            # compute dC/dx
+            # compute da/dm _i
             ax = compute_uax(A, B, goal_scale, s, goal_state, False, loc)
             # combine the derivatives to get the cost of inattention
             cost_of_inattention = (A[loc] * ax.dot(uaa.inverse().mv(ax))).abs()
@@ -92,13 +94,15 @@ def analytic_attention(microworld, goal_scale, goal_state, attention_cost, step_
                 attention = max(1 - attention_cost / cost_of_inattention, 0)
             A_attention[loc] = attention
 
-    B_attention = torch.zeros(B.shape)
+    B_attention = torch.zeros(B.shape, dtype=torch.float64)
     for i in range(B.shape[0]):
         for j in range(B.shape[1]):
             loc = (i, j)
+            # don't pay attention to non-existent connections
             if B[loc] == 0:
                 B_attention[loc] = 0
                 continue
+            # pay full attention if attention is free
             elif attention_cost == 0:
                 B_attention[loc] = 1
                 continue
@@ -125,10 +129,7 @@ def analytic_attention(microworld, goal_scale, goal_state, attention_cost, step_
     # compute the total amount of relationship being ignored
     total_ignorance = len(torch.nonzero(A)) + len(torch.nonzero(B)) - A_attention.sum() - B_attention.sum()
     total_attention = A_attention.sum() + B_attention.sum() - 5
-    current_goal_dist = distance(s, goal_state, goal_scale)
-
-    # create a new micro-world with the attention-reduced matrices
-    reduced_microworld = Microworld(A_reduced, B_reduced, init=s)
+    current_goal_dist = distance(A_reduced.mv(s), goal_state, goal_scale)
 
     # compute the gradient
     gradient = -torch.matmul(torch.div(

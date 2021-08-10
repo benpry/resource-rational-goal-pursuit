@@ -39,6 +39,7 @@ n_noisy = 10
 output_folder = "../../data/input_cost_analysis"
 qualitative_output_folder = "../../data/qualitative_data"
 
+# add the arguments to the parser
 parser = argparse.ArgumentParser()
 parser.add_argument("--exo_cost_mult", type=int, default=-1)
 parser.add_argument('--no_noise', action="store_true", default=False)
@@ -60,7 +61,7 @@ if __name__ == "__main__":
     noise = not args.no_noise
     save_qual = args.save_qual
 
-    # get all the conditions
+    # get all the situations
     df_condition = pd.read_csv(situations_filepath)
     situations = df_condition['initial_endogenous']
 
@@ -77,35 +78,31 @@ if __name__ == "__main__":
         # convert the situation to tensor format
         situation = torch.tensor(literal_eval(situation), dtype=torch.float64)
 
-        # run for each participant, using the best-fitting model and paramters for that participant
+        # run for each participant, using the best-fitting model and parameters for that participant
         for index, participant in df_params.iterrows():
-            agent_type =  participant["agent_type"]
+            agent_type = participant["agent_type"]
             step_size = float(participant["step_size"])
             attention_cost = float(participant["attention_cost"])
 
-            for i in range(n_noisy):
+            for _ in range(n_noisy):
                 if agent_type in ("hill_climbing", "sparse_max_discrete", "sparse_max_continuous"):
                     continuous_attention = False if agent_type == 'sparse_max_discrete' else True
+                    # initialize and run the agent
+                    macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=situation,
+                                                       subgoal_dimensions=[0, 1, 2, 3, 4],
+                                                       init_exogenous=init_exogenous, T=T, final_goal=goal,
+                                                       cost=attention_cost, lr=step_size,
+                                                       von_mises_parameter=vm_param,
+                                                       exponential_parameter=exp_param,
+                                                       continuous_attention=continuous_attention, exo_cost=exo_cost,
+                                                       step_with_model=noise, verbose=False)
 
-                    for _ in range(n_noisy):
-                        # initialize and run the agent
-                        macro_agent = MicroworldMacroAgent(A=A, B=B, init_endogenous=situation,
-                                                           subgoal_dimensions=[0, 1, 2, 3, 4],
-                                                           init_exogenous=init_exogenous,
-                                                           T=T, final_goal=goal,
-                                                           cost=attention_cost, lr=step_size,
-                                                           von_mises_parameter=vm_param,
-                                                           exponential_parameter=exp_param,
-                                                           continuous_attention=continuous_attention, exo_cost=exo_cost,
-                                                           step_with_model=noise, verbose=False)
+                    for i in range(10):
+                        _, _, _ = macro_agent.step(stop_t=1)
 
-                        for i in range(10):
-                            _, _, _ = macro_agent.step(stop_t=1)
-
-                        # compute the cost and store the exogenous variables
-                        all_exo = macro_agent.agent.all_exogenous
-                        s_final = macro_agent.env.endogenous_state
-
+                    # compute the cost and store the exogenous variables
+                    all_exo = macro_agent.agent.all_exogenous
+                    s_final = macro_agent.env.endogenous_state
 
                 elif agent_type == 'sparse_lqr':
                     performance_samples = []
@@ -136,7 +133,7 @@ if __name__ == "__main__":
                     all_exo = [torch.tensor([0., 0., 0., 0.], dtype=torch.float64) for _ in range(10)]
 
                 elif agent_type == 'null_model_1':
-                    n = int(participant['n'])
+                    n = int(np.round(participant['n']))
                     b = float(participant['b'])
 
                     microworld = Microworld(A=A, B=B, init=situation, exponential_parameter=exp_param,
@@ -156,6 +153,7 @@ if __name__ == "__main__":
 
                 elif agent_type == "lqr":  # we run the lqr on its own in a separate file
                     continue
+
                 else:
                     raise RuntimeError("unrecognized agent type")
 

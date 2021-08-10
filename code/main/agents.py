@@ -19,10 +19,14 @@ class HillClimbingAgent:
         """
         Initialize this hill-climbing agent
         goal_loc: the location of the currently-pursued goal
+        goal_scale: the scale of the currently pursued goal (for this paper, the scale is all 1s)
         initial_dist: the initial distance from the goal
-        subgoal_dimensions: the dimensions to pay attention to on the current subgoal
-        cost: cost of distance from goal for testing attention vectors
+        subgoal_dimensions: the dimensions to pay attention to on the current subgoal (for compatibility with future work)
+        att_cost: cost of attention for testing attention vectors
         init_exogenous: initial exogenous state
+        step_size: the multiple of the optimal step size to use
+        continuous_attention: whether attention should be continuous or discrete
+        exo_cost: the 'c' value determining the weight of exogenous costs
         """
         if A is not None:
             self.A = A
@@ -62,7 +66,7 @@ class HillClimbingAgent:
 
     def create_edges(self, subgoal_dimensions):
         """
-        Generate a list of all the links, with
+        Generate a list of all the links between variables in the simulated microworld
         subgoal_dimensions: list[int] - a list of indices of the variables to pay attention to
         """
 
@@ -77,7 +81,7 @@ class HillClimbingAgent:
         A = A.index_select(1, torch.tensor(subgoal_dimensions))
         B = B.index_select(0, torch.tensor(subgoal_dimensions))
 
-        # come up with links between reduced endogenous states
+        # come up with links between endogenous variables
         possible_links_a, possible_links_b = [], []
         for i in range(len(A)):
             for j in range(len(A)):
@@ -92,7 +96,7 @@ class HillClimbingAgent:
 
         all_comb = possible_links_a + possible_links_b
 
-        return all_comb, possible_links_a
+        return all_comb
 
     def create_attention_mv(self, endogenous, attention_vector):
         """
@@ -141,6 +145,7 @@ class HillClimbingAgent:
             A = A.index_select(1, torch.tensor(self.subgoal_dimensions))
             B = microworld.B.index_select(0, torch.tensor(self.subgoal_dimensions))
             state = microworld.endogenous_state.index_select(0, torch.tensor(self.subgoal_dimensions))
+
             # create a microworld for the current subgoal
             subgoal_microworld = Microworld(A, B, init=state)
 
@@ -157,7 +162,7 @@ class HillClimbingAgent:
             self.all_exogenous.append(self.exogenous)
         else:  # discrete attention version
             # generate a list of all the edges in the attention-reduced microworld
-            list_of_edges, possible_links_a = self.create_edges(self.subgoal_dimensions)
+            list_of_edges = self.create_edges(self.subgoal_dimensions)
             num_edges = len(list_of_edges)
             # initialize arrays for finding the best attention vector
             best_all_sizes, best_all_sizes_performance, best_exogenous_all_sizes = [], [], []
@@ -236,11 +241,11 @@ class HillClimbingAgent:
         microworld_attention.step(torch.zeros(4, dtype=torch.float64))
 
         # get distance from current goal
-        out = self.distance(microworld_attention.endogenous_state, self.goal_loc, self.goal_scale)
+        default_dist = self.distance(microworld_attention.endogenous_state, self.goal_loc, self.goal_scale)
 
         # compute gradient of distance between current location and current goal state
         gradient = -(torch.matmul(torch.div(
-            torch.matmul(self.goal_scale, (microworld_attention.endogenous_state - self.goal_loc)), out),
+            torch.matmul(self.goal_scale, (microworld_attention.endogenous_state - self.goal_loc)), default_dist),
             microworld_attention.B))
 
         if gradient.norm() == 0:
@@ -274,7 +279,7 @@ class HillClimbingAgent:
 
         # compute performance (delta in distance to final goal)
         performance = self.initial_dist - torch.sqrt(goal_dist**2 + self.exo_cost * exogenous.dot(exogenous))\
-                      - self.att_cost * cost_edges
+            - self.att_cost * cost_edges
 
         # remove the new edge that was added to the attention vector
         if new_edge:

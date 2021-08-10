@@ -1,7 +1,6 @@
 """
 Code for an agent in the microworld
 """
-import numpy as np
 import torch
 from agents import HillClimbingAgent
 from Microworld_experiment import Microworld

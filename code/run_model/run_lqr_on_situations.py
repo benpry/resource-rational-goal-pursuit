@@ -32,7 +32,7 @@ OUTPUT_FOLDER = "../../data/qualitative_data"
 
 if __name__ == "__main__":
 
-    # read the situations and paramaters
+    # read the situations and parameters
     df_condition = pd.read_csv(situations_filepath)
     situations = df_condition['initial_endogenous']
 
@@ -43,7 +43,6 @@ if __name__ == "__main__":
 
     for situation in situations:
         situation = torch.tensor(literal_eval(situation), dtype=torch.float64)
-        individual_performances = defaultdict(list)
 
         # configure a microworld and agent
         microworld = Microworld(A=A, B=B, init=situation)
@@ -65,6 +64,7 @@ if __name__ == "__main__":
     # save the performance data
     pd.DataFrame(lqr_rows).to_csv(f"{OUTPUT_FOLDER}/lqr_all_situations.csv", index=False)
 
+    # save all the scores and exogenous variables to pickle
     with open(f"{OUTPUT_FOLDER}/all_lqr_scores.p", "wb") as fp:
         pickle.dump(all_lqr_performances, fp)
 
