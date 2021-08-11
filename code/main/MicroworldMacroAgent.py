@@ -95,6 +95,8 @@ class MicroworldMacroAgent:
                 self.true_env.step_with_model(agent_exo)
             else:
                 self.true_env.step(agent_exo)
+            # update perceived env's endogenous state based on true env's state
+            self.perceived_env.endogenous_state = self.true_env.endogenous_state
 
             # get distance between final goal and current state
             final_goal_dist = self.distance(self.true_env.endogenous_state, self.final_goal_loc, self.final_goal_scale)

@@ -29,6 +29,7 @@ R = torch.diag(torch.tensor([0.01, 0.01, 0.01, 0.01], dtype=torch.float64))
 T = 10
 exo_cost = 0.01
 goal = torch.tensor([[0., 0., 0., 0., 0.], [1, 1, 1, 1, 1]], dtype=torch.float64)
+init_exogenous = torch.tensor([0., 0., 0., 0.], dtype=torch.float64)
 
 # exponential and von mises parameters
 exp_param_default = 0.1
@@ -56,11 +57,10 @@ def generate_sparsemax_data(continuous_attention, goal, init_endogenous, attenti
     # set up a sparse max agent
     macro_agent = MicroworldMacroAgent(A=A, B=B, true_B=true_B, init_endogenous=init_endogenous,
                                        subgoal_dimensions=[0, 1, 2, 3, 4],
-                                       init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64), T=T,
-                                       final_goal=goal, step_size=step_size, cost=attention_cost,
-                                       von_mises_parameter=vm_param, exponential_parameter=exp_param,
-                                       continuous_attention=continuous_attention, exo_cost=exo_cost,
-                                       step_with_model=add_noise, verbose=False)
+                                       init_exogenous=init_exogenous, T=T, final_goal=goal, step_size=step_size,
+                                       cost=attention_cost, von_mises_parameter=vm_param,
+                                       exponential_parameter=exp_param, continuous_attention=continuous_attention,
+                                       exo_cost=exo_cost, step_with_model=add_noise, verbose=False)
 
     # run the agent for ten iterations
     for t in range(10):
@@ -108,10 +108,10 @@ def compute_sparsemax_log_likelihood(states, continuous_attention, goal, init_en
             # set up the agent
             macro_agent = MicroworldMacroAgent(A=A, B=B, true_B=true_B, init_endogenous=endogenous,
                                                subgoal_dimensions=[0, 1, 2, 3, 4],
-                                               init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64),
-                                               T=T-t, final_goal=goal, cost=ac, step_size=ss,  von_mises_parameter=vm,
-                                               exponential_parameter=exp, continuous_attention=continuous_attention,
-                                               exo_cost=exo_cost, step_with_model=False, verbose=False)
+                                               init_exogenous=init_exogenous, T=T-t, final_goal=goal, cost=ac,
+                                               step_size=ss,  von_mises_parameter=vm, exponential_parameter=exp,
+                                               continuous_attention=continuous_attention, exo_cost=exo_cost,
+                                               step_with_model=False, verbose=False)
 
             # take a step
             _, s_next, _ = macro_agent.step(stop_t=1)
@@ -120,7 +120,6 @@ def compute_sparsemax_log_likelihood(states, continuous_attention, goal, init_en
         return human_and_agent_states_to_log_likelihood(data_states, agent_states, exp, vm)
 
     pbounds = {'ac': (0., 30.), 'ss': step_size_range, 'exp': exp_range, 'vm': vm_range}
-
     optimizer = BayesianOptimization(
         f=cost_function,
         pbounds=pbounds,
@@ -166,7 +165,6 @@ def compute_nm1_log_likelihood(states, init_endogenous):
         return np.mean(log_likelihoods)
 
     pbounds = {'n': (1., 5.), 'b': (0., 50.), 'exp': exp_range, 'vm': vm_range}
-
     optimizer = BayesianOptimization(
         f=cost_function,
         pbounds=pbounds,
@@ -195,14 +193,12 @@ def compute_nm2_log_likelihood(states, init_endogenous):
                 endogenous = init_endogenous
             else:
                 endogenous = states[t-1]
-
             # set up the microworld
             env = Microworld(A=A, B=true_B, init=endogenous)
             # take a step in the microworld
             agent_input = torch.zeros(B.shape[1], dtype=torch.float64)
             env.step(agent_input.unsqueeze(0))
             agent_states.append(env.endogenous_state.numpy()[0])
-
         # return the log-likelihood
         return human_and_agent_states_to_log_likelihood(data_states, agent_states, exp, vm)
 
@@ -235,7 +231,6 @@ def compute_lqr_log_likelihood(states, init_endogenous):
                 endogenous = init_endogenous
             else:
                 endogenous = states[t - 1]
-
             # get the LQR action sequence
             optimal_agent = OptimalAgent(A, B, Q, Qf, R, T - t, endogenous)
             action_sequence = optimal_agent.get_actions()
@@ -249,7 +244,6 @@ def compute_lqr_log_likelihood(states, init_endogenous):
         return human_and_agent_states_to_log_likelihood(data_states, agent_states, exp, vm)
 
     pbounds = {'exp': exp_range, 'vm': vm_range}
-
     optimizer = BayesianOptimization(
         f=cost_function,
         pbounds=pbounds,
@@ -293,7 +287,6 @@ def compute_sparse_lqr_log_likelihood(states, init_endogenous):
         return human_and_agent_states_to_log_likelihood(data_states, agent_states, exp, vm)
 
     pbounds = {'ac': (0., 300.), 'exp': exp_range, 'vm': vm_range}  # higher attention cost to balance out more rounds
-
     optimizer = BayesianOptimization(
         f=cost_function,
         pbounds=pbounds,
@@ -327,10 +320,10 @@ def compute_hill_climbing_log_likelihood(states, goal, init_endogenous):
             # set up the hill-climbing agent
             macro_agent = MicroworldMacroAgent(A=A, B=B, true_B=true_B, init_endogenous=endogenous,
                                                subgoal_dimensions=[0, 1, 2, 3, 4],
-                                               init_exogenous=torch.tensor([0., 0., 0., 0.], dtype=torch.float64),
-                                               T=T-t, final_goal=goal, cost=0, step_size=ss, von_mises_parameter=vm,
-                                               exponential_parameter=exp, continuous_attention=True, exo_cost=exo_cost,
-                                               step_with_model=False, verbose=False)
+                                               init_exogenous=init_exogenous, T=T-t, final_goal=goal, cost=0,
+                                               step_size=ss, von_mises_parameter=vm, exponential_parameter=exp,
+                                               continuous_attention=True, exo_cost=exo_cost, step_with_model=False,
+                                               verbose=False)
             # take a step and save the state
             _, s_next, _ = macro_agent.step(stop_t=1)
             agent_states.append(s_next.numpy())
@@ -338,7 +331,6 @@ def compute_hill_climbing_log_likelihood(states, goal, init_endogenous):
         return human_and_agent_states_to_log_likelihood(data_states, agent_states, exp, vm)
 
     pbounds = {'ss': step_size_range, 'exp': exp_range, 'vm': vm_range}
-
     optimizer = BayesianOptimization(
         f=cost_function,
         pbounds=pbounds,

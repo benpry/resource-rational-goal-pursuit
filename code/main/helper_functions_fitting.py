@@ -34,7 +34,6 @@ def log_likelihood_exponential(lengths, ld):
     ld: exponential parameter
     """
     N = len(lengths)
-
     return N * np.log(ld) - ld * np.sum(lengths)
 
 
@@ -68,41 +67,35 @@ def run_lqr_once(A, B, situation, human_data, exo_cost, exp_param, vm_param, n_r
     # ensure that the situation is the right datatype
     if type(situation) != torch.Tensor:
         situation = torch.tensor(situation, dtype=torch.float64)
-
     # set up the cost matrices
     init_endogenous = situation
     Q = torch.zeros(A.shape[0], dtype=torch.float64)
     Qf = torch.diag(torch.ones(A.shape[0], dtype=torch.float64))
     R = exo_cost * torch.diag(torch.ones(B.shape[1], dtype=torch.float64))
-
     # initialize lists for the human and agent states
     agent_states = []
     human_states = []
-
     for t in range(n_rounds):
         if t > 0:
             init_endogenous = torch.tensor(ast.literal_eval(human_data.iloc[t - 1]['endogenous']), dtype=torch.float64)
-
         # in case not all timesteps are recorded for a pp
         try:
             next_state_human = ast.literal_eval(human_data.iloc[t]['endogenous'])
             # if we get a bug here we should insert except: break below
         except IndexError:
             break
-
         # define the appropriate LQR agent
         if attention_cost is None:
             lqr_agent = OptimalAgent(A, B, Q, Qf, R, T=n_rounds - t, init_endogenous=init_endogenous)
         else:
             lqr_agent = SparseLQRAgent(A, B, Q, Qf, R, T=n_rounds - t, init_endogenous=init_endogenous,
                                        attention_cost=attention_cost * (n_rounds - t) / n_rounds)
-        agent_action = lqr_agent.get_actions()[0]
 
+        agent_action = lqr_agent.get_actions()[0]
         # define the microworld and take a step in it
         env = Microworld(A, true_B, init_endogenous)
         env.step(agent_action)
         s_next = env.endogenous_state
-
         # append the states
         agent_states.append(s_next.numpy())
         human_states.append(next_state_human)
@@ -138,7 +131,6 @@ def run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost
                                      von_mises_parameter=vm_param,  exponential_parameter=exp_param,
                                      step_with_model=False, exo_cost=exo_cost,
                                      continuous_attention=continuous_attention, verbose=False)
-
         # take a step with the agent
         _, s_next, _ = agent.step(stop_t=1)
         # append the next human and agent states
@@ -206,7 +198,6 @@ def to_endogenous(r, angles):
     r: radius of a state
     angles: angles of a state
     """
-
     x_1 = r * np.cos(angles[0])
     x_2 = r * np.sin(angles[0]) * np.cos(angles[1])
     x_3 = r * np.sin(angles[0]) * np.sin(angles[1]) * np.cos(angles[2])
@@ -228,7 +219,6 @@ def make_individual_cost_function(human_data=None, pp_id=None, goals=None, agent
     continuous_attention: whether to use continuous or discrete attention (for sparse hill_climbing)
     exo_cost: the cost associated with exogenous actions in the environment
     """
-
     def cost_function_individual(step_size=None, attention_cost=None, human_data=human_data,
                                  goals=goals, agent_type=agent_type, exp_param=None, vm_param=None):
         """
@@ -256,8 +246,8 @@ def make_individual_cost_function(human_data=None, pp_id=None, goals=None, agent
 
         # set up the goal pursuit environment
         A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
-                          [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]], dtype=torch.float64)
-        B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
+                          [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0., 1.]], dtype=torch.float64)
+        B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
                          dtype=torch.float64)
 
         # run the agent and get the log-likelihood
@@ -273,6 +263,7 @@ def make_individual_cost_function(human_data=None, pp_id=None, goals=None, agent
 
     return cost_function_individual
 
+
 def null_model(n, b, endogenous, goal_loc):
     """
     Implementtation of null model 1, which randomly selects the endogenous variables to pay attention to, then sets the
@@ -280,28 +271,24 @@ def null_model(n, b, endogenous, goal_loc):
     """
     # the (perceived) exogenous-to-endogenous transition matrix
     B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]])
-
     # choose n endogenous variables to target
     target_vars = np.random.choice(5, n, p=[1 / 5] * 5)
-
     # set up the budget and initialize an exogenous variable
     budget = b
     exogenous = [0., 0., 0., 0.]
-    for target_var in target_vars:
 
+    for target_var in target_vars:
         # choose the direction and magnitude of the input targeting this variable
         if endogenous[target_var] < goal_loc[target_var]:
             exogenous_input = float(np.random.uniform(0, budget, 1))
         else:
             exogenous_input = float(np.random.uniform(-budget, 0, 1))
-
         # choose which of the possible input variables to target
         possible_inputs = [i for i, j in enumerate(B[target_var]) if j > 0]
         if len(possible_inputs) > 1:
             input_var = np.random.choice(2, 1, p=[1 / 2] * 2)[0]
         else:
             input_var = possible_inputs[0]
-
         exogenous[input_var] = exogenous_input  # set the chosen exogenous variable
 
     return exogenous
@@ -337,7 +324,6 @@ def make_individual_cost_function_null_1(human_data=None, pp_id=None, goals=None
 
             human_states = []
             agent_states = []
-
             init_endogenous = goals[1]  # set init_endogenous to the starting value
             # iterate over timesteps in the experiment
             for t in range(10):
@@ -384,8 +370,8 @@ def make_individual_cost_function_null_2(human_data=None, pp_id=None, goals=None
 
         # set up the transition matrices
         A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
-                          [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]], dtype=torch.float64)
-        B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
+                          [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0., 1.]], dtype=torch.float64)
+        B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
                          dtype=torch.float64)
 
         agent_states = []

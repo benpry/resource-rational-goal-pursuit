@@ -26,10 +26,10 @@ B = torch.tensor([[0.0, 0.0, 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0
                  dtype=torch.float64)
 true_B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [-0.2, 0., 0.7, 2.],
                        [0., 10., 0., 0.]], dtype=torch.float64)
-
 init_exogenous = torch.tensor([0., 0., 0., 0.], dtype=torch.float64)
 T = 10
 
+# seed the random number generators
 np.random.seed(500)
 torch.manual_seed(1000)
 
@@ -49,10 +49,8 @@ parser.add_argument('--no_noise', action="store_true", default=False)
 parser.add_argument('--save_qual', action="store_true", default=False)
 
 if __name__ == "__main__":
-
     # get the exogenous cost and whether to use noise from the arguments
     args = parser.parse_args()
-
     # select the right exogenous cost
     if args.exo_cost_mult == -1:
         exo_cost = 0.01
@@ -60,17 +58,15 @@ if __name__ == "__main__":
         all_exo_costs = 10 ** (np.linspace(-4, 0, 100))
         exo_cost = all_exo_costs[args.exo_cost_mult]
 
-    R = exo_cost * torch.diag(torch.ones((4,), dtype=torch.float64))
+    R = exo_cost * torch.diag(torch.ones((4,), dtype=torch.float64))  # set up the exogenous cost matrix
     noise = not args.no_noise
     save_qual = args.save_qual
 
     # get all the situations
     df_condition = pd.read_csv(situations_filepath)
     situations = df_condition['initial_endogenous']
-
     # read the best-fitting models and parameters for each participant
     df_params = pd.read_csv(params_filepath)
-
     # initialize dictionaries to store all the exogenous inputs and performance samples
     all_model_exo = defaultdict(list)
     all_model_performance_samples = defaultdict(list)
@@ -90,6 +86,9 @@ if __name__ == "__main__":
             for _ in range(n_noisy):
                 if agent_type in ("hill_climbing", "sparse_max_discrete", "sparse_max_continuous"):
                     continuous_attention = False if agent_type == 'sparse_max_discrete' else True
+                    if agent_type == "hill_climbing":
+                        attention_cost = 0
+
                     # initialize and run the agent
                     macro_agent = MicroworldMacroAgent(A=A, B=B, true_B=true_B, init_endogenous=situation,
                                                        subgoal_dimensions=[0, 1, 2, 3, 4],
@@ -99,10 +98,8 @@ if __name__ == "__main__":
                                                        exponential_parameter=exp_param,
                                                        continuous_attention=continuous_attention, exo_cost=exo_cost,
                                                        step_with_model=noise, verbose=False)
-
                     for i in range(10):
                         _, _, _ = macro_agent.step(stop_t=1)
-
                     # compute the cost and store the exogenous variables
                     all_exo = macro_agent.agent.all_exogenous
                     s_final = macro_agent.true_env.endogenous_state
@@ -111,7 +108,6 @@ if __name__ == "__main__":
                     performance_samples = []
                     microworld = Microworld(A=A, B=true_B, init=situation, exponential_parameter=exp_param,
                                             von_mises_parameter=vm_param)
-
                     all_exo = []
                     for i in range(10):
                         sparse_lqr_agent = SparseLQRAgent(A, B, Q, Qf, R, T-i, microworld.endogenous_state,
@@ -130,7 +126,6 @@ if __name__ == "__main__":
                     # run null model 2 on the microworld
                     for i in range(10):
                         microworld.step_with_model(torch.zeros(B.shape[1], dtype=torch.float64), noise=noise)
-
                     # compute the cost and store the exogenous variables
                     s_final = microworld.endogenous_state
                     all_exo = [torch.tensor([0., 0., 0., 0.], dtype=torch.float64) for _ in range(10)]
@@ -138,10 +133,8 @@ if __name__ == "__main__":
                 elif agent_type == 'null_model_1':
                     n = int(np.round(participant['n']))
                     b = float(participant['b'])
-
                     microworld = Microworld(A=A, B=true_B, init=situation, exponential_parameter=exp_param,
                                             von_mises_parameter=vm_param)
-
                     # run null model 1 on the microworld
                     all_exo = []
                     for i in range(10):
