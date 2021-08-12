@@ -35,6 +35,7 @@ torch.manual_seed(1000)
 
 # initialize filepaths and hyperparameters
 params_filepath = '../../data/fitting_results/best_fitting_models.csv'
+nm1_filepath = '../../data/fitting_results/nm1_best_pps.csv'
 situations_filepath = '../../data/experimental_data/experiment_conditions.csv'
 exp_param = 0.1
 vm_param = 40
@@ -67,6 +68,8 @@ if __name__ == "__main__":
     situations = df_condition['initial_endogenous']
     # read the best-fitting models and parameters for each participant
     df_params = pd.read_csv(params_filepath)
+    df_nm1 = pd.read_csv(nm1_filepath)
+    df_params = pd.concat([df_params, df_nm1])
     # initialize dictionaries to store all the exogenous inputs and performance samples
     all_model_exo = defaultdict(list)
     all_model_performance_samples = defaultdict(list)

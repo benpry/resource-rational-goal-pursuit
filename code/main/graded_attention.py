@@ -53,8 +53,7 @@ def distance(s, g, scale):
     """
     Compute distance from state s to goal g
     """
-    return torch.sqrt(torch.matmul(torch.matmul((s - g), scale).unsqueeze(0),
-                                   (s - g).t()))
+    return torch.sqrt(torch.matmul(torch.matmul((s - g), scale).unsqueeze(0), (s - g).t()))
 
 
 def analytic_attention(microworld, goal_scale, goal_state, attention_cost, step_size, exo_cost):
