@@ -152,6 +152,7 @@ class SparseLQRAgent:
         endogenous: the initial endogenous state
         attention_vector:
         """
+        # create copies of A and B so certain variables can be ignored
         A = self.A.clone().detach()
         B = self.B.clone().detach()
 
@@ -180,6 +181,7 @@ class SparseLQRAgent:
         # initialize array of P matrices
         P = [0 for _ in range(n + 1)]
 
+        # unpack the matrices and endogenous state of the microworld
         A = microworld.A
         B = microworld.B
         endogenous = microworld.endogenous_state

@@ -47,7 +47,6 @@ def compute_uax(A, B, S, s, g, is_in_B, loc):
         num1 = S.inverse().matmul(dAs).matmul(B) * torch.sqrt(squared_dist_to_goal)
         num2 = S.inverse().mv(A.mv(s) - g).dot(dAs) * (S.inverse().mv(A.mv(s) - g)).matmul(B) / \
             torch.sqrt(squared_dist_to_goal)
-
         return (num1 - num2) / squared_dist_to_goal
 
 def distance(s, g, scale):
@@ -82,7 +81,6 @@ def analytic_attention(microworld, goal_scale, goal_state, attention_cost, step_
             elif attention_cost == 0:
                 A_attention[loc] = 1
                 continue
-
             # compute da/dm _i
             ax = compute_uax(A, B, goal_scale, s, goal_state, False, loc)
             # combine the derivatives to get the cost of inattention
@@ -106,7 +104,6 @@ def analytic_attention(microworld, goal_scale, goal_state, attention_cost, step_
             elif attention_cost == 0:
                 B_attention[loc] = 1
                 continue
-
             # compute dC/dx
             ax = compute_uax(A, B, goal_scale, s, goal_state, True, loc)
             # combine the derivatives to get the cost of inattention

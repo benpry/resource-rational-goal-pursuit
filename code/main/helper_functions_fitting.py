@@ -10,8 +10,14 @@ from mpmath import *
 from scipy.special import i0
 from linear_quadratic_regulator import OptimalAgent, SparseLQRAgent
 
+# Set up the transition matrices
+A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
+                  [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0., 1.]], dtype=torch.float64)
+B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
+                 dtype=torch.float64)
 true_B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [-0.2, 0., 0.7, 2.],
                        [0., 10., 0., 0.]], dtype=torch.float64)
+
 
 def log_likelihood_von_mises(angles_data, k):
     """
@@ -39,12 +45,12 @@ def log_likelihood_exponential(lengths, ld):
 
 def human_and_agent_states_to_log_likelihood(human_states, agent_states, ld, k):
     """
-    A function to compute the log likelihood of the visited states of humans
+    A function to compute the log likelihood of the visited states of humans given the model's states
 
     human_states: all states a participant vistited
     agent_states: all states the model visited
-    ld: rate parameter of the exponential distribution
-    k: var parameter of the von mises distribution
+    ld: exponential parameter
+    k: concentration parameter of the von mises distribution
     """
     distances_length, all_angles = [], []
     for human_state, agent_state in zip(human_states, agent_states):
@@ -67,7 +73,8 @@ def run_lqr_once(A, B, situation, human_data, exo_cost, exp_param, vm_param, n_r
     # ensure that the situation is the right datatype
     if type(situation) != torch.Tensor:
         situation = torch.tensor(situation, dtype=torch.float64)
-    # set up the cost matrices
+
+    # set up the cost matrices and initial endogenous variables
     init_endogenous = situation
     Q = torch.zeros(A.shape[0], dtype=torch.float64)
     Qf = torch.diag(torch.ones(A.shape[0], dtype=torch.float64))
@@ -81,7 +88,6 @@ def run_lqr_once(A, B, situation, human_data, exo_cost, exp_param, vm_param, n_r
         # in case not all timesteps are recorded for a pp
         try:
             next_state_human = ast.literal_eval(human_data.iloc[t]['endogenous'])
-            # if we get a bug here we should insert except: break below
         except IndexError:
             break
         # define the appropriate LQR agent
@@ -92,7 +98,7 @@ def run_lqr_once(A, B, situation, human_data, exo_cost, exp_param, vm_param, n_r
                                        attention_cost=attention_cost * (n_rounds - t) / n_rounds)
 
         agent_action = lqr_agent.get_actions()[0]
-        # define the microworld and take a step in it
+        # define the true microworld and take a step in it
         env = Microworld(A, true_B, init_endogenous)
         env.step(agent_action)
         s_next = env.endogenous_state
@@ -121,7 +127,6 @@ def run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost
         # in case not all 10 timesteps are recorded for a pp
         try:
             next_state_human = ast.literal_eval(human_data.iloc[t]['endogenous'])
-            # if we get a bug here we should insert except: break below
         except IndexError:
             break
         # define a goal pursuit agent
@@ -154,7 +159,7 @@ def to_spherical(vec):
     """
     Transform a vector of 5 dimensions to spherical coordinates
 
-    vec: numpy array of len 5 reprenting a visited state
+    vec: numpy array of len 5 reprenting a state in Cartesian coordinates
     """
     r = np.linalg.norm(vec)
     if np.linalg.norm(np.delete(vec, [0])) == 0.:
@@ -232,23 +237,16 @@ def make_individual_cost_function(human_data=None, pp_id=None, goals=None, agent
         # filter out all but the data from the participant we're studying
         human_data = human_data[human_data['pp_id'] == pp_id]
 
-        # get the corresponding goal (consists of the starting position and final goal)
+        # get the corresponding "goal" (consists of the starting position and final goal)
         goal_id = int(list(set(human_data['condition']))[0])
         goal = goals[goal_id]
 
         # set attention cost to 0 for the hill-climbing agent:
         if agent_type == "hill_climbing":
             attention_cost = 0
-
         # get the goal scale and location
         final_goal = torch.tensor(goal[0], dtype=torch.float64)
         final_goal[1] = 1 / final_goal[1]
-
-        # set up the goal pursuit environment
-        A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
-                          [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0., 1.]], dtype=torch.float64)
-        B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
-                         dtype=torch.float64)
 
         # run the agent and get the log-likelihood
         if agent_type in ('lqr', 'sparse_lqr'):
@@ -257,7 +255,6 @@ def make_individual_cost_function(human_data=None, pp_id=None, goals=None, agent
         else:
             log_likelihood = run_agent_once(A, B, goal, step_size, final_goal, human_data, attention_cost, exo_cost,
                                             exp_param, vm_param, continuous_attention)
-
         # return the log-likelihood
         return log_likelihood
 
@@ -269,8 +266,6 @@ def null_model(n, b, endogenous, goal_loc):
     Implementtation of null model 1, which randomly selects the endogenous variables to pay attention to, then sets the
     exogenous variables to random amounts in the direction of interest
     """
-    # the (perceived) exogenous-to-endogenous transition matrix
-    B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]])
     # choose n endogenous variables to target
     target_vars = np.random.choice(5, n, p=[1 / 5] * 5)
     # set up the budget and initialize an exogenous variable
@@ -298,7 +293,6 @@ def make_individual_cost_function_null_1(human_data=None, pp_id=None, goals=None
     """
     Return a cost function that assesses the null model based on its log-likelihood compared to the human data
     """
-
     def cost_function_null_1(n=None, b=None, exp_param=None, vm_param=None, human_data=human_data,
                              pp_id=pp_id, goals=goals):
         """
@@ -306,22 +300,15 @@ def make_individual_cost_function_null_1(human_data=None, pp_id=None, goals=None
         """
         # round the number of variables targeted to an integer
         n = int(np.round(n))
-
         # select the right human data and set up the situation
         human_data = human_data[human_data['pp_id'] == pp_id]
         goal_id = int(list(set(human_data['condition']))[0])
         goals = goals[goal_id]
         final_goal = torch.tensor(goals[0])
         final_goal[1] = 1 / final_goal[1]
-
-        # set up the microworld environment
-        A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
-                          [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0.0, 1.]], dtype=torch.float64)
-
         # Run the model 10 times to average log likelihoods
         log_likelihoods = []
         for i in range(10):
-
             human_states = []
             agent_states = []
             init_endogenous = goals[1]  # set init_endogenous to the starting value
@@ -333,11 +320,9 @@ def make_individual_cost_function_null_1(human_data=None, pp_id=None, goals=None
                     next_state_human = ast.literal_eval(str(human_data.iloc[t]['endogenous']))
                 except IndexError:
                     break
-
                 # set up the microworld and get an input from the agent
                 env = Microworld(A=A, B=true_B, init=init_endogenous)
                 agent_input = torch.tensor(null_model(n, b, init_endogenous, final_goal[0]), dtype=torch.float64)
-
                 # take a step and store the next states
                 env.step(agent_input.unsqueeze(0))
                 agent_states.append(env.endogenous_state.numpy()[0])
@@ -345,7 +330,6 @@ def make_individual_cost_function_null_1(human_data=None, pp_id=None, goals=None
 
             log_likelihoods.append(human_and_agent_states_to_log_likelihood(human_states, agent_states, exp_param,
                                                                             vm_param))
-
         # return the mean log-likelihood
         return np.mean(log_likelihoods)
 
@@ -368,18 +352,13 @@ def make_individual_cost_function_null_2(human_data=None, pp_id=None, goals=None
         final_goal = torch.tensor(goals[0])
         final_goal[1] = 1 / final_goal[1]
 
-        # set up the transition matrices
-        A = torch.tensor([[1., 0., 0., 0., 0.], [0., 1., 0., 0., -0.5], [0., 0., 1., 0., -0.5],
-                          [0.1, -0.1, 0.1, 1., 0.], [0., 0., 0., 0., 1.]], dtype=torch.float64)
-        B = torch.tensor([[0., 0., 2., 0.], [5., 0., 0., 0.], [3., 0., 5., 0.], [0., 0., 0., 2.], [0., 10., 0., 0.]],
-                         dtype=torch.float64)
-
         agent_states = []
         human_states = []
         init_endogenous = goals[1]
         for t in range(10):
             if t > 0:
                 init_endogenous = ast.literal_eval(str(human_data.iloc[t - 1]['endogenous']))
+            # try reading the next human state, break if it is not available
             try:
                 next_state_human = ast.literal_eval(str(human_data.iloc[t]['endogenous']))
             except IndexError:
@@ -389,7 +368,6 @@ def make_individual_cost_function_null_2(human_data=None, pp_id=None, goals=None
             env = Microworld(A=A, B=true_B, init=init_endogenous)
             agent_input = torch.zeros(B.shape[1], dtype=torch.float64)
             env.step(agent_input.unsqueeze(0))
-
             # save the human and agent states
             agent_states.append(env.endogenous_state.numpy()[0])
             human_states.append(next_state_human)

@@ -41,7 +41,7 @@ class MicroworldMacroAgent:
         self.T = T
         self.verbose = verbose
 
-        # create a microworld environment
+        # create perceived and real microworld environments
         self.perceived_env = Microworld(A=A, B=B, init=init_endogenous, von_mises_parameter=von_mises_parameter,
                                         exponential_parameter=exponential_parameter)
         self.true_env = Microworld(A=A, B=true_B, init=init_endogenous, von_mises_parameter=von_mises_parameter,
@@ -51,7 +51,7 @@ class MicroworldMacroAgent:
         self.initial_dist = self.distance(self.perceived_env.endogenous_state, self.final_goal_loc,
                                           self.final_goal_scale)
 
-        # set up a hill-climbing agent
+        # set up a goal pursuit agent
         self.agent = HillClimbingAgent(A=A, B=B, goal_loc=self.final_goal_loc, goal_scale=self.final_goal_scale,
                                        initial_dist=self.initial_dist, subgoal_dimensions=subgoal_dimensions,
                                        init_exogenous=init_exogenous, step_size=step_size,

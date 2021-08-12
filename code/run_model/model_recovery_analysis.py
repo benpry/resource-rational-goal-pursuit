@@ -152,10 +152,9 @@ def compute_nm1_log_likelihood(states, init_endogenous):
                     endogenous = init_endogenous
                 else:
                     endogenous = states[t-1]
-
                 # set up the microworld
                 env = Microworld(A=A, B=true_B, init=endogenous)
-                # take a step inthe microworld
+                # take a step in the microworld
                 agent_input = torch.tensor(null_model(n, b, endogenous, goal[0]), dtype=torch.float64)
                 env.step(agent_input.unsqueeze(0))
                 agent_states.append(env.endogenous_state.numpy()[0])
@@ -264,7 +263,6 @@ def compute_sparse_lqr_log_likelihood(states, init_endogenous):
     """
     Compute the log likelihood of the human states under the sparse LQR
     """
-
     def cost_function(ac, exp, vm):
         data_states = [s.numpy() for s in states]
         agent_states = []
@@ -307,7 +305,6 @@ def compute_hill_climbing_log_likelihood(states, goal, init_endogenous):
     """
     compute the likelihood of the given states under the hill-climbing model
     """
-
     def cost_function(ss, exp, vm):
         data_states = [s.numpy() for s in states]
         agent_states = []
@@ -362,8 +359,7 @@ if __name__ == '__main__':
     row = df_params.loc[row_idx]
 
     # get the starting situation
-    df_ppids = pd.read_csv(PPID_FILE)
-    ppid = df_ppids.loc[row_idx]["id"]
+    ppid = row["pp_id"]
     df_actions = pd.read_csv(ACTIONS_FILE)
     condition_num = df_actions[df_actions["pp_id"] == ppid]["condition"].min()
     df_conditions = pd.read_csv(CONDITIONS_FILE)

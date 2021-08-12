@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import pickle
 from ast import literal_eval
-from collections import defaultdict
 import sys
 sys.path.append('../main')
 from linear_quadratic_regulator import OptimalAgent
