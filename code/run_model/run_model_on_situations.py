@@ -104,7 +104,7 @@ if __name__ == "__main__":
                     for i in range(10):
                         _, _, _ = macro_agent.step(stop_t=1)
                     # compute the cost and store the exogenous variables
-                    all_exo = macro_agent.agent.all_exogenous
+                    all_exo = [x.tolist() for x in macro_agent.agent.all_exogenous]
                     s_final = macro_agent.true_env.endogenous_state
 
                 elif agent_type == 'sparse_lqr':
@@ -117,7 +117,7 @@ if __name__ == "__main__":
                                                           attention_cost=attention_cost * (T-i) / T)
                         opt_sequence = sparse_lqr_agent.get_actions()
                         microworld.step_with_model(opt_sequence[0], noise=noise)
-                        all_exo.append(opt_sequence[0])
+                        all_exo.append(opt_sequence[0].tolist())
 
                     # compute the cost and store the exogenous variables
                     s_final = microworld.endogenous_state
@@ -131,7 +131,7 @@ if __name__ == "__main__":
                         microworld.step_with_model(torch.zeros(B.shape[1], dtype=torch.float64), noise=noise)
                     # compute the cost and store the exogenous variables
                     s_final = microworld.endogenous_state
-                    all_exo = [torch.tensor([0., 0., 0., 0.], dtype=torch.float64) for _ in range(10)]
+                    all_exo = [[0., 0., 0., 0.] for _ in range(10)]
 
                 elif agent_type == 'null_model_1':
                     n = int(np.round(participant['n']))
@@ -145,7 +145,7 @@ if __name__ == "__main__":
                                                                                            dtype=torch.float64))
                         action = torch.tensor(action, dtype=torch.float64)
                         microworld.step_with_model(action, noise=noise)
-                        all_exo.append(action)
+                        all_exo.append(action.tolist())
 
                     # compute the cost and store the exogenous variables
                     s_final = microworld.endogenous_state
