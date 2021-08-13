@@ -104,7 +104,7 @@ if __name__ == "__main__":
                     for i in range(10):
                         _, _, _ = macro_agent.step(stop_t=1)
                     # compute the cost and store the exogenous variables
-                    all_exo = [x.tolist() for x in macro_agent.agent.all_exogenous]
+                    all_exo = [x.float().tolist() for x in macro_agent.agent.all_exogenous]
                     s_final = macro_agent.true_env.endogenous_state
 
                 elif agent_type == 'sparse_lqr':
@@ -117,7 +117,7 @@ if __name__ == "__main__":
                                                           attention_cost=attention_cost * (T-i) / T)
                         opt_sequence = sparse_lqr_agent.get_actions()
                         microworld.step_with_model(opt_sequence[0], noise=noise)
-                        all_exo.append(opt_sequence[0].tolist())
+                        all_exo.append(opt_sequence[0].float().tolist())
 
                     # compute the cost and store the exogenous variables
                     s_final = microworld.endogenous_state
@@ -145,7 +145,7 @@ if __name__ == "__main__":
                                                                                            dtype=torch.float64))
                         action = torch.tensor(action, dtype=torch.float64)
                         microworld.step_with_model(action, noise=noise)
-                        all_exo.append(action.tolist())
+                        all_exo.append(action.float().tolist())
 
                     # compute the cost and store the exogenous variables
                     s_final = microworld.endogenous_state
@@ -165,7 +165,7 @@ if __name__ == "__main__":
                 all_model_performance_samples[agent_type].append(total_cost)
                 all_model_exo[agent_type].extend(all_exo)
                 df_all_runs = df_all_runs.append(
-                    pd.DataFrame({"situation": str(situation.tolist()), "model": agent_type,
+                    pd.DataFrame({"situation": str(situation.float().tolist()), "model": agent_type,
                                   "performance": total_cost}, index=[0]), ignore_index=True)
 
                 if not noise:

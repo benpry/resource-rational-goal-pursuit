@@ -41,7 +41,7 @@ if __name__ == "__main__":
     all_lqr_performances = []
     lqr_rows = []
 
-    for situation in situations:
+    for situation in situations[:30]:
         situation = torch.tensor(literal_eval(situation), dtype=torch.float64)
 
         # configure a microworld and agent
@@ -56,7 +56,7 @@ if __name__ == "__main__":
             all_exo.append(all_actions[0])
 
         # save the exogenous actions and the cost
-        all_lqr_exo.extend([x.tolist() for x in all_exo])
+        all_lqr_exo.extend([x.float().tolist() for x in all_exo])
         s_final = microworld.endogenous_state
         distance_cost = s_final.dot(Qf.mv(s_final))
         exogenous_cost = np.sum([x.dot(R.mv(x)) for x in all_exo])
