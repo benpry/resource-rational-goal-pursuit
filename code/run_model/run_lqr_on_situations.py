@@ -34,14 +34,14 @@ if __name__ == "__main__":
 
     # read the situations and parameters
     df_condition = pd.read_csv(situations_filepath)
-    situations = df_condition['initial_endogenous']
+    situations = df_condition['initial_endogenous'].drop_duplicates()
 
     # initialize lists for performances and exogenous inputs
     all_lqr_exo = []
     all_lqr_performances = []
     lqr_rows = []
 
-    for situation in situations[:30]:
+    for situation in situations:
         situation = torch.tensor(literal_eval(situation), dtype=torch.float64)
 
         # configure a microworld and agent

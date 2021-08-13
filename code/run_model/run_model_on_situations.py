@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     # get all the situations
     df_condition = pd.read_csv(situations_filepath)
-    situations = df_condition['initial_endogenous']
+    situations = df_condition['initial_endogenous'].drop_duplicates()
     # read the best-fitting models and parameters for each participant
     df_params = pd.read_csv(params_filepath)
     df_nm1 = pd.read_csv(nm1_filepath)
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     df_all_runs = pd.DataFrame()
 
     # run on each situation
-    for situation in tqdm(situations[:30]):
+    for situation in tqdm(situations):
         # convert the situation to tensor format
         situation = torch.tensor(literal_eval(situation), dtype=torch.float64)
 
